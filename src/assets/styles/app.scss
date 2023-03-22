@@ -1,12 +1,264 @@
 @import "~normalize.css";
 
+@import "fonts";
+
+* {
+    box-sizing: border-box;
+}
+
 body {
+    font-family: "Pixeboy", sans-serif;
     background: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+canvas {
+    position: absolute;
+    left: 110px;
+    top: 66px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    display: none;
+
+    &.is-active {
+        display: block;
+    }
+}
+
+button {
+    border: none;
+    outline: none;
+    background-color: white;
+    position: relative;
+    display: block;
+    padding: 10px 10px;
+    color: black;
+    width: 100%;
+    text-transform: uppercase;
+    font-size: 32px;
+    line-height: 1;
+    z-index: 2;
+
+    &:before,
+    &:after {
+        content: "";
+        display: block;
+        position: absolute;
+        top: 10px;
+        bottom: 10px;
+        left: -10px;
+        right: -10px;
+        background: white;
+        z-index: -1;
+    }
+
+    &:after {
+        top: 4px;
+        bottom: 4px;
+        left: -6px;
+        right: -6px;
+    }
+}
+
+.container {
+    height: 100vh;
+    width: 100vw;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-canvas {
-    border: 1px solid white;
+.game-container {
+    position: relative;
+    width: 1020px;
+    height: 630px;
+
+    &:before {
+        position: absolute;
+        content: "";
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("../../assets/images/tv.png");
+        background-position: center;
+        background-size: contain;
+        background-repeat: no-repeat;
+        z-index: 10;
+    }
+
+    button {
+        text-align: left;
+        padding-left: 30px;
+        background-color: black;
+        color: white;
+
+        &.is-active {
+            background-color: white;
+            color: black;
+        }
+
+        &:before,
+        &:after {
+            display: none;
+        }
+    }
+}
+
+.game-ui {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.game-menu {
+    position: absolute;
+    left: 80px;
+    top: 80px;
+    width: 680px;
+    display: none;
+
+    &.is-active {
+        display: block;
+    }
+}
+
+.game-status {
+    position: absolute;
+    left: 110px;
+    top: 180px;
+    width: 440px;
+    text-align: center;
+    font-size: 100px;
+    line-height: 1;
+    display: none;
+
+    &.is-active {
+        display: block;
+    }
+
+    .game-status__actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        button {
+            width: 150px;
+
+            &:not(:first-child) {
+                margin-top: 20px;
+            }
+        }
+    }
+}
+
+.game-score {
+    position: absolute;
+    top: 80px;
+    left: 580px;
+    display: none;
+
+    &.is-active {
+        display: block;
+    }
+
+    .game-score__item {
+        font-size: 32px;
+        line-height: 1;
+
+        &:not(:first-child) {
+            margin-top: 20px;
+        }
+
+        span {
+            color: yellow;
+        }
+    }
+}
+
+.game-tv-mask {
+    position: absolute;
+    width: 680px;
+    height: 500px;
+    top: 40px;
+    left: 80px;
+    z-index: 3;
+
+    &:after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(rgba(0, 0, 0, 0.2) 50%, transparent 100%),
+            linear-gradient(rgba(0, 0, 0, 0.1) 10%, transparent);
+    }
+
+    .game-tv-mask__noise {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 5% / 50%;
+    }
+
+    .game-tv-mask__effect {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+
+        &:before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 20%;
+            background: rgba(255, 255, 255, 0.2);
+            animation: noiseeffect 4000ms infinite linear;
+            border-radius: 50% / 5%;
+        }
+
+        &:after {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(transparent 50%, rgba(0, 0, 0, 0.8)),
+                linear-gradient(rgba(255, 255, 255, 0.4) 10%, transparent);
+            box-shadow: inset 0 5px 25px rgba(255, 255, 255, 0.2),
+                inset 5px 0 15px rgba(255, 255, 255, 0.2),
+                inset -5px 0 15px rgba(255, 255, 255, 0.1), 0 0 10px rgba(0, 0, 0, 1),
+                inset 0 200px 5px rgba(255, 255, 255, 0.05);
+            border-radius: 50% / 5%;
+        }
+    }
+}
+
+
+@keyframes noiseeffect {
+    0% {
+        top: -20%;
+        opacity: 0;
+    }
+
+    20% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    80% {
+        opacity: 0;
+    }
+
+    100% {
+        top: 100%;
+        opacity: 0;
+    }
 }

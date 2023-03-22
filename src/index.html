@@ -7,6 +7,38 @@
   <title><% htmlWebpackPlugin.options.title %></title>
 </head>
 <body>
-  <canvas id="game" width="608" height="608"></canvas>
+  <div class="container">
+    <div class="game-container">
+      <canvas id="game" width="440" height="440"></canvas>
+
+      <div id="game-ui" class="game-ui">
+        <div class="game-menu is-active" id="game-menu"></div>
+        <div class="game-status" id="game-status">
+          <div class="game-status__text">GAME OVER</div>
+          <div class="game-status__actions">
+            <button>RESTART</button>
+            <button>EXIT</button>
+          </div>
+        </div>
+        <div class="game-score" id="game-score">
+          <div class="game-score__item">
+            SCORE:<br/>
+            <span id="game-score-current">000000</span>
+          </div>
+          <div class="game-score__item">
+            MAX SCORE:<br/>
+            <span id="game-score-max">000000</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="game-tv-mask">
+        <div class="game-tv-mask__noise">
+          <div class="game-tv-mask__effect">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

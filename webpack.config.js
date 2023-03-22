@@ -5,8 +5,15 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   mode: 'development',
+
+  devtool: 'inline-source-map',
+
+  resolve: {
+    extensions: ['.tsx', '.ts', '.js'],
+  },
+
   entry: {
-    main: path.resolve(__dirname, './src/index.js'),
+    main: path.resolve(__dirname, './src/index.ts'),
   },
 
   output: {
@@ -62,6 +69,12 @@ module.exports = {
         exclude: /node_modules/,
         use: ['babel-loader'],
       },
+
+      {
+        test: /\.tsx?$/,
+        use: 'ts-loader',
+        exclude: /node_modules/,
+      },
     ],
   },
 };
@@ -69,4 +82,5 @@ module.exports = {
 // patterns: [
 //   { from: path.resolve(__dirname, 'src/favicon.svg'), to: path.resolve(__dirname, 'dist') },
 //   { from: path.resolve(__dirname, 'src/assets/icons'), to: path.resolve(__dirname, 'dist/assets/icons') },
+//   { from: path.resolve(__dirname, 'src/assets/images'), to: path.resolve(__dirname, 'dist/assets/images') },
 // ],

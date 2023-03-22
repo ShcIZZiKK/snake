@@ -1,18 +1,20 @@
 {
-    "parser": "@babel/eslint-parser",
-    "env": {
-        "es6": true,
-        "browser": true
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+        "project": ["./tsconfig.json"]
     },
-    "extends": ["airbnb"],
+    "env": {
+        "browser": true,
+        "es6": true,
+        "node": true
+    },
+    "plugins": ["@typescript-eslint"],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
     "rules": {
-        "no-param-reassign": 0,
-        "no-plusplus": "off",
-        "max-classes-per-file": ["error", 7],
-        "no-use-before-define": ["error", {
-            "functions": true,
-            "classes": false
-        }],
-        "no-console": "off"
+        "@typescript-eslint/no-var-requires": "off"
     }
 }
