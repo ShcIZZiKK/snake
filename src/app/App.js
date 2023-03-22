@@ -20,6 +20,7 @@ const games = [
   },
 ];
 
-const gameManager = new GameManager(games);
+const gameManager = GameManager.getInstance();
 
+gameManager.setGamesList(games);
 gameManager.init();

@@ -1,33 +1,56 @@
 import Mediator from '../helpers/Mediator';
+import GameManager from './GameManager';
+import Utils from '../helpers/Utils';
+
+interface test {
+  current: number;
+  max: number;
+}
 
 const mediator = new Mediator();
 
 class UIManager {
+  private static instance: UIManager;
+  private uiManagerMenu: UIManagerMenu;
+  private uiManagerScore: UIManagerScore;
+
+  public static getInstance(): UIManager {
+    if (!UIManager.instance) {
+      UIManager.instance = new UIManager();
+    }
+
+    return UIManager.instance;
+  }
+
+  private constructor() {
+    this.init();
+  }
+
+  private init(): void {
+    this.uiManagerMenu = new UIManagerMenu();
+    this.uiManagerScore = new UIManagerScore();
+  }
+
+  public setMenuItems(wrapper: HTMLElement, menuButtons: Array<string>) {
+    this.uiManagerMenu.createMenuButtons(wrapper, menuButtons);
+  }
+
+  public setScoreItems(currentWrapper: HTMLElement, maxWrapper: HTMLElement) {
+    this.uiManagerScore.setBlocks(currentWrapper, maxWrapper);
+  }
+}
+
+class UIManagerMenu {
+  private menuButtons: Array<HTMLElement> = [];
+  private activeIndex = 0;
+  private activeClass = 'is-active';
+
   constructor() {
-    this.game = null;
-    this.mainMenu = null;
-    this.status = null;
-    this.score = null;
-    this.stage = 'menu';
-    this.menuButtons = [];
-    this.activeIndex = 0;
+    this.subscribes();
   }
 
-  init(menuButtons): void {
-    this.#getElements();
-    this.#createMenuButtons(menuButtons);
-    this.#subscribes();
-  }
-
-  #getElements() {
-    this.game = document.getElementById('game');
-    this.mainMenu = document.getElementById('game-menu');
-    this.status = document.getElementById('game-status');
-    this.score = document.getElementById('game-score');
-  }
-
-  #createMenuButtons(menuButtons) {
-    if (!this.mainMenu || !menuButtons.length) {
+  public createMenuButtons(wrapper: HTMLElement, menuButtons: Array<string>) {
+    if (!wrapper || !menuButtons.length) {
       return;
     }
 
@@ -38,19 +61,27 @@ class UIManager {
       elem.appendChild(elemText);
 
       if (index === 0) {
-        elem.className = 'is-active';
+        elem.className = this.activeClass;
         this.activeIndex = 0;
       }
 
-      this.mainMenu.appendChild(elem);
+      wrapper.appendChild(elem);
 
       this.menuButtons.push(elem);
     });
   }
 
-  #subscribes() {
+  private changeActiveClassMenuButtons() {
+    this.menuButtons.forEach((button, index) => {
+      const method = index === this.activeIndex ? 'add' : 'remove';
+
+      button.classList[method](this.activeClass);
+    });
+  }
+
+  private subscribes() {
     mediator.subscribe('keyboard:up-arrow', () => {
-      if (this.stage !== 'menu') {
+      if (GameManager.stage !== 'menu') {
         return;
       }
 
@@ -58,11 +89,11 @@ class UIManager {
         this.activeIndex === 0
           ? this.menuButtons.length - 1
           : this.activeIndex - 1;
-      this.#changeActiveClassMenuButtons();
+      this.changeActiveClassMenuButtons();
     });
 
     mediator.subscribe('keyboard:down-arrow', () => {
-      if (this.stage !== 'menu') {
+      if (GameManager.stage !== 'menu') {
         return;
       }
 
@@ -70,27 +101,42 @@ class UIManager {
         this.activeIndex === this.menuButtons.length - 1
           ? 0
           : this.activeIndex + 1;
-      this.#changeActiveClassMenuButtons();
+      this.changeActiveClassMenuButtons();
     });
 
     mediator.subscribe('keyboard:enter', () => {
-      if (this.stage !== 'menu') {
+      if (GameManager.stage !== 'menu') {
         return;
       }
 
-      this.mainMenu.classList.remove('is-active');
-      this.game.classList.add('is-active');
-      this.score.classList.add('is-active');
-
-      mediator.publish('game:enter', this.activeIndex);
+      mediator.publish('menu:enter', this.activeIndex);
     });
   }
+}
 
-  #changeActiveClassMenuButtons() {
-    this.menuButtons.forEach((button, index) => {
-      const method = index === this.activeIndex ? 'add' : 'remove';
+class UIManagerScore {
+  private current: HTMLElement;
+  private max: HTMLElement;
 
-      button.classList[method]('is-active');
+  constructor() {
+    this.subscribes();
+  }
+
+  setBlocks(current: HTMLElement, max: HTMLElement) {
+    this.current = current;
+    this.max = max;
+  }
+
+  private subscribes() {
+    mediator.subscribe('store:update', (obj: test) => {
+      if (GameManager.stage === 'menu') {
+        return;
+      }
+
+      const { current, max } = obj;
+
+      this.current.innerText = Utils.getFilledZeroText(current.toString());
+      this.max.innerText = Utils.getFilledZeroText(max.toString());
     });
   }
 }

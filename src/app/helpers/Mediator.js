@@ -3,6 +3,7 @@ let instance = null;
 class Mediator {
   constructor() {
     if (!instance) {
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       instance = this;
     }
 

@@ -1,11 +1,14 @@
 import Snake from './Snake';
 import Food from './Food';
 import Mediator from '../../helpers/Mediator';
+import StoreManager from '../../managers/StoreManager';
 
 const mediator = new Mediator();
 
 class Game {
   constructor() {
+    this.score = 0;
+
     /**
      * Поле, на котором всё будет происходить, — тоже как бы переменная
      */
@@ -84,6 +87,8 @@ class Game {
   #subscribes() {
     mediator.subscribe('food:eat', () => {
       this.food.setRandomPosition();
+      this.score++;
+      StoreManager.updateCurrentValue('snake', this.score);
     });
 
     mediator.subscribe('snake:dead', () => {
