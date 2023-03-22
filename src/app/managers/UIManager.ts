@@ -54,9 +54,10 @@ class UIManager {
         return;
       }
 
-      this.activeIndex = this.activeIndex === 0
-        ? this.menuButtons.length - 1
-        : this.activeIndex - 1;
+      this.activeIndex =
+        this.activeIndex === 0
+          ? this.menuButtons.length - 1
+          : this.activeIndex - 1;
       this.#changeActiveClassMenuButtons();
     });
 
@@ -65,9 +66,10 @@ class UIManager {
         return;
       }
 
-      this.activeIndex = this.activeIndex === this.menuButtons.length - 1
-        ? 0
-        : this.activeIndex + 1;
+      this.activeIndex =
+        this.activeIndex === this.menuButtons.length - 1
+          ? 0
+          : this.activeIndex + 1;
       this.#changeActiveClassMenuButtons();
     });
 
