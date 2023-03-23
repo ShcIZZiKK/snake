@@ -1,16 +1,12 @@
 import Mediator from '../helpers/Mediator';
+import { GameScoreStoreItem } from '../interfaces';
 
 const mediator = new Mediator();
 
-interface GameStore {
-  name: string,
-  current: number,
-  max: number
-}
-
 class StoreManager {
   private static instance: StoreManager;
-  public static store: Array<GameStore> = [];
+  private currentStore: GameScoreStoreItem;
+  private store: Array<GameScoreStoreItem> = [];
 
   public static getInstance(): StoreManager {
     if (!StoreManager.instance) {
@@ -20,33 +16,48 @@ class StoreManager {
     return StoreManager.instance;
   }
 
-  public setGamesList(games: Array<string>) {
-    games.forEach((game) => {
-      const gameStore = {
-        name: game,
+  public setStore(gameName: string) {
+    const storeObject = this.store.find((item) => item.name === gameName);
+
+    if (storeObject) {
+      this.setCurrentStore(storeObject);
+    } else {
+      const gameStore: GameScoreStoreItem = {
+        name: gameName,
         current: 0,
-        max: Number(localStorage.getItem(`${game}-max`)) || 0,
+        max: Number(localStorage.getItem(`${gameName}-max`)) || 0,
       }
 
-      StoreManager.store.push(gameStore);
-    });
+      this.store.push(gameStore);
+      this.setCurrentStore(this.store[this.store.length - 1]);
+    }
   }
 
-  public static updateCurrentValue(game: string, value: number) {
-    const currentGame = StoreManager.store.find((item) => item.name === game);
-
-    if (!currentGame) {
+  public updateCurrentValue(value: number) {
+    if (!this.currentStore) {
       return;
     }
 
-    currentGame.current = value;
+    this.currentStore.current = value;
 
-    if (value > currentGame.max) {
-      currentGame.max = value;
-      localStorage.setItem(`${game}-max`, value.toString());
+    if (value > this.currentStore.max) {
+      this.currentStore.max = value;
+      localStorage.setItem(`${this.currentStore.name}-max`, value.toString());
     }
 
-    mediator.publish('store:update',  { current: currentGame.current, max: currentGame.max })
+    this.publishStoreValue();
+  }
+
+  private setCurrentStore(store: GameScoreStoreItem) {
+    this.currentStore = store;
+    this.publishStoreValue();
+  }
+
+  private publishStoreValue() {
+    mediator.publish('store:update',  {
+      current: this.currentStore.current,
+      max: this.currentStore.max
+    });
   }
 }
 

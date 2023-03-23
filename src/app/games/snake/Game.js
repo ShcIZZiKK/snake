@@ -1,7 +1,8 @@
 import Snake from './Snake';
 import Food from './Food';
-import Mediator from '../../helpers/Mediator';
+import AudioManager from '../../managers/AudioManager';
 import StoreManager from '../../managers/StoreManager';
+import Mediator from '../../helpers/Mediator';
 
 const mediator = new Mediator();
 
@@ -31,11 +32,32 @@ class Game {
   }
 
   init() {
+    this.#initAudioManager();
+    this.#initStoreManager();
     this.#initElements();
     this.#subscribes();
   }
 
+  #initAudioManager() {
+    const musicList = {
+      game: 'snake',
+      list: [
+        { name: 'main', file: 'main.mp3', loop: true },
+        { name: 'food', file: 'food.mp3', loop: false }
+      ]
+    };
+
+    this.audioManager = AudioManager.getInstance();
+    this.audioManager.addMusicList(musicList);
+  }
+
+  #initStoreManager() {
+    this.storeManager = StoreManager.getInstance();
+    this.storeManager.setStore('snake');
+  }
+
   start() {
+    this.audioManager.musicPlay('main');
     requestAnimationFrame(this.loop.bind(this));
   }
 
@@ -86,12 +108,17 @@ class Game {
 
   #subscribes() {
     mediator.subscribe('food:eat', () => {
-      this.food.setRandomPosition();
+      this.audioManager.musicPlay('food');
       this.score++;
-      StoreManager.updateCurrentValue('snake', this.score);
+      this.storeManager.updateCurrentValue(this.score);
+
+      this.food.setRandomPosition();
     });
 
     mediator.subscribe('snake:dead', () => {
+      this.score = 0;
+      this.storeManager.updateCurrentValue(this.score);
+
       this.snake.restart();
       this.food.setRandomPosition();
     });

@@ -1,25 +1,11 @@
-// import AudioManager from './AudioManager';
 import InputManager from './InputManager';
 import UIManager from './UIManager';
 import VisibilityManager from './VisibilityManager';
 import Mediator from '../helpers/Mediator';
-import StoreManager from './StoreManager';
+import { GameObject, InterfaceBlock } from '../interfaces';
+import { stage } from '../types';
 
 const mediator = new Mediator();
-
-type stage = 'menu' | 'game' | 'win' | 'lose';
-
-interface GameObject {
-  name: string,
-  game: any // eslint-disable-line @typescript-eslint/no-explicit-any
-}
-
-type blockName = 'game' | 'menu' | 'status' | 'score';
-
-interface InterfaceBlock {
-  name: blockName,
-  element: HTMLElement
-}
 
 class GameManager {
   private static instance: GameManager;
@@ -46,16 +32,10 @@ class GameManager {
 
   public init() {
     this.getElements();
-    // this.audioManager = new AudioManager();
     this.subscribes();
     this.initUIManager();
     this.initVisibilityManager();
     this.initInputManager();
-
-    //
-    const storeManager = StoreManager.getInstance();
-    const buttons = this.gamesList.map((item) => item.name);
-    storeManager.setGamesList(buttons);
   }
 
   public setGamesList(games: Array<GameObject>) {
@@ -66,20 +46,20 @@ class GameManager {
     GameManager.stage = stage;
 
     switch (GameManager.stage) {
-    case 'menu':
-      this.visibilityManager.hideBlocks(['game', 'status', 'score']);
-      this.visibilityManager.showBlocks(['menu']);
-      break;
-    case 'game':
-      this.visibilityManager.hideBlocks(['menu']);
-      this.visibilityManager.showBlocks(['game', 'score']);
-      break;
-    case 'win':
-    case 'lose':
-      this.visibilityManager.showBlocks(['status']);
-      break;
-    default:
-      break;
+      case 'menu':
+        this.visibilityManager.hideBlocks(['game', 'status', 'score']);
+        this.visibilityManager.showBlocks(['menu']);
+        break;
+      case 'game':
+        this.visibilityManager.hideBlocks(['menu']);
+        this.visibilityManager.showBlocks(['game', 'score']);
+        break;
+      case 'win':
+      case 'lose':
+        this.visibilityManager.showBlocks(['status']);
+        break;
+      default:
+        break;
     }
   }
 
@@ -113,18 +93,16 @@ class GameManager {
   }
 
   private initInputManager() {
-    const inputManager = new InputManager();
-    inputManager.init();
+    InputManager.getInstance();
   }
 
   private subscribes() {
     mediator.subscribe('menu:enter', (index: number) => {
       const { game } = this.gamesList[index];
 
-      game.init();
-
       this.updateStage('game');
 
+      game.init();
       game.start();
     });
   }

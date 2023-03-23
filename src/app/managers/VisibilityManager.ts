@@ -1,9 +1,5 @@
-type blockName = 'game' | 'menu' | 'status' | 'score';
-
-interface InterfaceBlock {
-  name: blockName,
-  element: HTMLElement
-}
+import { InterfaceBlock } from '../interfaces';
+import { blockName } from '../types';
 
 class VisibilityManager {
   private static instance: VisibilityManager;

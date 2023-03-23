@@ -1,11 +1,8 @@
-import Mediator from '../helpers/Mediator';
+import AudioManager from './AudioManager';
 import GameManager from './GameManager';
+import Mediator from '../helpers/Mediator';
 import Utils from '../helpers/Utils';
-
-interface test {
-  current: number;
-  max: number;
-}
+import { GameScore } from '../interfaces';
 
 const mediator = new Mediator();
 
@@ -46,6 +43,7 @@ class UIManagerMenu {
   private activeClass = 'is-active';
 
   constructor() {
+    this.initAudioManager();
     this.subscribes();
   }
 
@@ -69,6 +67,18 @@ class UIManagerMenu {
 
       this.menuButtons.push(elem);
     });
+  }
+
+  private initAudioManager() {
+    const musicList = {
+      game: 'menu',
+      list: [
+        { name: 'main', file: 'main.mp3', loop: true },
+      ]
+    };
+
+    // this.audioManager = AudioManager.getInstance();
+    // this.audioManager.addMusicList(musicList);
   }
 
   private changeActiveClassMenuButtons() {
@@ -128,7 +138,7 @@ class UIManagerScore {
   }
 
   private subscribes() {
-    mediator.subscribe('store:update', (obj: test) => {
+    mediator.subscribe('store:update', (obj: GameScore) => {
       if (GameManager.stage === 'menu') {
         return;
       }
