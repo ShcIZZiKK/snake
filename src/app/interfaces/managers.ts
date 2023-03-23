@@ -1,13 +1,13 @@
 import { blockName } from '../types';
 
 export interface GameObject {
-  name: string,
-  game: any // eslint-disable-line @typescript-eslint/no-explicit-any
+  name: string;
+  game: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 export interface InterfaceBlock {
-  name: blockName,
-  element: HTMLElement
+  name: blockName;
+  element: HTMLElement;
 }
 
 export interface GameScore {
@@ -16,17 +16,23 @@ export interface GameScore {
 }
 
 export interface GameScoreStoreItem extends GameScore {
-  name: string,
+  name: string;
 }
 
-export interface SoundsList {
+export interface Sound {
   name: string;
   file: string;
-  loop: boolean,
-  manager?: HTMLAudioElement
+  loop: boolean;
+  manager?: HTMLAudioElement;
 }
 
-export interface Sounds {
-  game: string;
-  list: Array<SoundsList>
+export interface ResultBlocksButton {
+  eventName: string;
+  element: HTMLElement;
+}
+
+export interface ResultBlocks {
+  textWrapper: HTMLElement;
+  scoreWrapper: HTMLElement;
+  buttons: Array<ResultBlocksButton>;
 }

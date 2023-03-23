@@ -87,6 +87,7 @@ class Snake {
       for (let i = index + 1; i < this.cells.length; i++) {
         // Если такие клетки есть — начинаем игру заново
         if (cell.x === this.cells[i].x && cell.y === this.cells[i].y) {
+          this.context.fillStyle = 'orange';
           mediator.publish('snake:dead');
         }
       }

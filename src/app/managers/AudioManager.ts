@@ -1,36 +1,19 @@
-import { Sounds, SoundsList } from '../interfaces';
+import { Sound } from '../interfaces';
 
 class AudioManager {
-  private static instance: AudioManager;
   private dir = 'assets/audio/';
-  private currentSound: Sounds;
-  private sounds: Array<Sounds> = [];
+  private sounds: Array<Sound> = [];
 
-  public addMusicList(sound: Sounds) {
-    const soundObject = this.sounds.find((item) => item.game === sound.game);
+  public addMusicList(sounds: Array<Sound>) {
+    sounds.forEach((item: Sound) => {
+      item.manager = this.createAudioManager(item.file, item.loop);
+    });
 
-    if (soundObject) {
-      this.setCurrentSound(soundObject);
-    } else {
-      sound.list.forEach((item: SoundsList) => {
-        item.manager = this.createAudioManager(item.file, item.loop);
-      });
-
-      this.sounds.push(sound);
-      this.setCurrentSound(this.sounds[this.sounds.length - 1]);
-    }
-  }
-
-  public static getInstance(): AudioManager {
-    if (!AudioManager.instance) {
-      AudioManager.instance = new AudioManager();
-    }
-
-    return AudioManager.instance;
+    this.sounds = sounds;
   }
 
   public musicPlay(name: string) {
-    const musicObject = this.currentSound.list.find((item) => item.name === name);
+    const musicObject = this.findMusic(name);
 
     if (!musicObject) {
       return;
@@ -39,8 +22,19 @@ class AudioManager {
     musicObject.manager.play();
   }
 
-  private setCurrentSound(sound: Sounds) {
-    this.currentSound = sound;
+  public musicStop(name: string) {
+    const musicObject = this.findMusic(name);
+
+    if (!musicObject) {
+      return;
+    }
+
+    musicObject.manager.pause();
+    musicObject.manager.currentTime = 0;
+  }
+
+  private findMusic(name: string) {
+    return this.sounds.find((item) => item.name === name);
   }
 
   private createAudioManager(file: string, loop: boolean) {

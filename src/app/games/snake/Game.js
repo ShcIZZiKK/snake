@@ -29,6 +29,8 @@ class Game {
     this.count = 0;
 
     this.snake = null;
+
+    this.gameOver = false;
   }
 
   init() {
@@ -39,15 +41,13 @@ class Game {
   }
 
   #initAudioManager() {
-    const musicList = {
-      game: 'snake',
-      list: [
-        { name: 'main', file: 'main.mp3', loop: true },
-        { name: 'food', file: 'food.mp3', loop: false }
-      ]
-    };
+    const musicList = [
+      { name: 'snake', file: 'snake.mp3', loop: true },
+      { name: 'food', file: 'food.mp3', loop: false },
+      { name: 'lose', file: 'lose.mp3', loop: false }
+    ];
 
-    this.audioManager = AudioManager.getInstance();
+    this.audioManager = new AudioManager();
     this.audioManager.addMusicList(musicList);
   }
 
@@ -57,11 +57,26 @@ class Game {
   }
 
   start() {
-    this.audioManager.musicPlay('main');
+    this.audioManager.musicPlay('snake');
+    this.gameOver = false;
     requestAnimationFrame(this.loop.bind(this));
   }
 
+  stop() {
+    this.gameOver = true;
+  }
+
+  restart() {
+    this.snake.restart();
+    this.food.setRandomPosition();
+    this.start();
+  }
+
   loop() {
+    if (this.gameOver) {
+      return;
+    }
+
     requestAnimationFrame(this.loop.bind(this));
 
     if (++this.count < 20) {
@@ -116,14 +131,17 @@ class Game {
     });
 
     mediator.subscribe('snake:dead', () => {
+      this.audioManager.musicStop('snake');
+      this.audioManager.musicPlay('lose');
+      this.stop();
+
+      mediator.publish('game:lose', this.score);
+
       this.score = 0;
       this.storeManager.updateCurrentValue(this.score);
-
-      this.snake.restart();
-      this.food.setRandomPosition();
     });
 
-    mediator.subscribe('keyboard:left-arrow', () => {
+    mediator.subscribe('keyboard:ArrowLeft', () => {
       const { dx } = this.snake.getDirection();
 
       if (dx === 0) {
@@ -131,7 +149,7 @@ class Game {
       }
     });
 
-    mediator.subscribe('keyboard:up-arrow', () => {
+    mediator.subscribe('keyboard:ArrowUp', () => {
       const { dy } = this.snake.getDirection();
 
       if (dy === 0) {
@@ -139,7 +157,7 @@ class Game {
       }
     });
 
-    mediator.subscribe('keyboard:right-arrow', () => {
+    mediator.subscribe('keyboard:ArrowRight', () => {
       const { dx } = this.snake.getDirection();
 
       if (dx === 0) {
@@ -147,7 +165,7 @@ class Game {
       }
     });
 
-    mediator.subscribe('keyboard:down-arrow', () => {
+    mediator.subscribe('keyboard:ArrowDown', () => {
       const { dy } = this.snake.getDirection();
 
       if (dy === 0) {

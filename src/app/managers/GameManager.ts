@@ -2,7 +2,7 @@ import InputManager from './InputManager';
 import UIManager from './UIManager';
 import VisibilityManager from './VisibilityManager';
 import Mediator from '../helpers/Mediator';
-import { GameObject, InterfaceBlock } from '../interfaces';
+import { GameObject, InterfaceBlock, ResultBlocksButton } from '../interfaces';
 import { stage } from '../types';
 
 const mediator = new Mediator();
@@ -21,6 +21,10 @@ class GameManager {
   private scoreWrapper: HTMLElement;
   private scoreCurrentWrapper: HTMLElement;
   private scoreMaxWrapper: HTMLElement;
+  private resultTextWrapper: HTMLElement;
+  private resultScoreWrapper: HTMLElement;
+  private resultButtonRestart: HTMLElement;
+  private resultButtonExit: HTMLElement;
 
   public static getInstance(): GameManager {
     if (!GameManager.instance) {
@@ -51,7 +55,7 @@ class GameManager {
         this.visibilityManager.showBlocks(['menu']);
         break;
       case 'game':
-        this.visibilityManager.hideBlocks(['menu']);
+        this.visibilityManager.hideBlocks(['menu', 'status']);
         this.visibilityManager.showBlocks(['game', 'score']);
         break;
       case 'win':
@@ -70,14 +74,27 @@ class GameManager {
     this.scoreWrapper = document.getElementById('game-score');
     this.scoreCurrentWrapper = document.getElementById('game-score-current');
     this.scoreMaxWrapper = document.getElementById('game-score-max');
+    this.resultTextWrapper = document.getElementById('game-status-text');
+    this.resultScoreWrapper = document.getElementById('game-status-score');
+    this.resultButtonRestart = document.getElementById('game-status-restart');
+    this.resultButtonExit = document.getElementById('game-status-exit');
   }
 
   private initUIManager() {
     const buttons = this.gamesList.map((item) => item.name);
+    const buttonsResult: Array<ResultBlocksButton> = [
+      { eventName: 'restart', element: this.resultButtonRestart },
+      { eventName: 'exit', element: this.resultButtonExit }
+    ];
 
     this.uiManager = UIManager.getInstance();
     this.uiManager.setMenuItems(this.menuWrapper, buttons);
     this.uiManager.setScoreItems(this.scoreCurrentWrapper, this.scoreMaxWrapper);
+    this.uiManager.setResultBlocks({
+      textWrapper: this.resultTextWrapper,
+      scoreWrapper: this.resultScoreWrapper,
+      buttons: buttonsResult
+    });
   }
 
   private initVisibilityManager() {
@@ -98,12 +115,27 @@ class GameManager {
 
   private subscribes() {
     mediator.subscribe('menu:enter', (index: number) => {
-      const { game } = this.gamesList[index];
+      this.activeGame = this.gamesList[index];
 
       this.updateStage('game');
 
-      game.init();
-      game.start();
+      this.activeGame.game.init();
+      this.activeGame.game.start();
+    });
+
+    mediator.subscribe('game:lose', (score: number) => {
+      this.updateStage('lose');
+      this.uiManager.setResult('lose', score);
+    });
+
+    mediator.subscribe('result:restart', () => {
+      this.updateStage('game');
+      this.activeGame.game.restart();
+    });
+
+    mediator.subscribe('result:exit', () => {
+      this.updateStage('menu');
+      this.uiManager.playMusic();
     });
   }
 }

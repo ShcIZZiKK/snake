@@ -47,7 +47,7 @@ button {
         display: block;
         position: absolute;
         top: 10px;
-        bottom: 10px;
+        height: calc(100% - 20px);
         left: -10px;
         right: -10px;
         background: white;
@@ -56,7 +56,7 @@ button {
 
     &:after {
         top: 4px;
-        bottom: 4px;
+        height: calc(100% - 8px);
         left: -6px;
         right: -6px;
     }
@@ -88,23 +88,6 @@ button {
         background-repeat: no-repeat;
         z-index: 10;
     }
-
-    button {
-        text-align: left;
-        padding-left: 30px;
-        background-color: black;
-        color: white;
-
-        &.is-active {
-            background-color: white;
-            color: black;
-        }
-
-        &:before,
-        &:after {
-            display: none;
-        }
-    }
 }
 
 .game-ui {
@@ -125,12 +108,29 @@ button {
     &.is-active {
         display: block;
     }
+
+    button {
+        text-align: left;
+        padding-left: 30px;
+        background-color: black;
+        color: white;
+
+        &.is-active {
+            background-color: white;
+            color: black;
+        }
+
+        &:before,
+        &:after {
+            display: none;
+        }
+    }
 }
 
 .game-status {
     position: absolute;
     left: 110px;
-    top: 180px;
+    top: 130px;
     width: 440px;
     text-align: center;
     font-size: 100px;
@@ -140,20 +140,35 @@ button {
     &.is-active {
         display: block;
     }
+}
 
-    .game-status__actions {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+.game-status__actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 
-        button {
-            width: 150px;
+    button {
+        width: 150px;
+        margin-top: 20px;
 
-            &:not(:first-child) {
-                margin-top: 20px;
+        &.is-active {
+            background-color: greenyellow;
+
+            &:before,
+            &:after {
+                background-color: greenyellow;
+            }
+
+            span {
+                background-color: white;
             }
         }
     }
+}
+
+.game-status__score {
+    color: yellow;
+    font-size: 52px;
 }
 
 .game-score {
