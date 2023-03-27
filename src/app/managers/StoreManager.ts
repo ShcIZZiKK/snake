@@ -1,6 +1,6 @@
 import Mediator from '../helpers/Mediator';
 
-const mediator = new Mediator();
+const mediator = Mediator.getInstance();
 
 class StoreManager {
   private readonly gameName: string;

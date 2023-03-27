@@ -4,7 +4,7 @@ import Mediator from '../helpers/Mediator';
 import { GameObject, InterfaceBlock, ResultBlocksButton } from '../interfaces';
 import { stage } from '../types';
 
-const mediator = new Mediator();
+const mediator = Mediator.getInstance();
 
 class GameManager {
   private static instance: GameManager;
@@ -24,6 +24,7 @@ class GameManager {
   private resultScoreWrapper: HTMLElement;
   private resultButtonRestart: HTMLElement;
   private resultButtonExit: HTMLElement;
+  private gameHelper: HTMLElement;
 
   public static init(games: Array<GameObject>) {
     if (!GameManager.instance) {
@@ -72,6 +73,7 @@ class GameManager {
     this.resultScoreWrapper = document.getElementById('game-status-score');
     this.resultButtonRestart = document.getElementById('game-status-restart');
     this.resultButtonExit = document.getElementById('game-status-exit');
+    this.gameHelper = document.getElementById('game-helper');
   }
 
   private initUIManager() {
@@ -89,6 +91,8 @@ class GameManager {
       scoreWrapper: this.resultScoreWrapper,
       buttons: buttonsResult
     });
+    this.uiManager.setHelperBlock(this.gameHelper);
+    this.uiManager.setDefaultHelperList();
   }
 
   private initVisibilityManager() {
@@ -113,6 +117,10 @@ class GameManager {
 
       this.updateStage('game');
       this.activeGame.game.init();
+
+      if (this.activeGame.helper) {
+        this.uiManager.updateHelperList(this.activeGame.helper);
+      }
     });
 
     mediator.subscribe('game:lose', (score: number) => {
@@ -125,14 +133,15 @@ class GameManager {
       this.uiManager.setResult('win', score);
     });
 
-    mediator.subscribe('result:restart', () => {
+    mediator.subscribe('game:restart', () => {
       this.updateStage('game');
       this.activeGame.game.restart();
     });
 
-    mediator.subscribe('result:exit', () => {
+    mediator.subscribe('game:exit', () => {
       this.updateStage('menu');
       this.uiManager.playMusic();
+      this.uiManager.setDefaultHelperList();
     });
   }
 }

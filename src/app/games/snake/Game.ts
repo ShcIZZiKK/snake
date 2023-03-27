@@ -5,7 +5,7 @@ import StoreManager from '../../managers/StoreManager';
 import Mediator from '../../helpers/Mediator';
 import DefaultGame from '../../abstracts/DefaultGame';
 
-const mediator = new Mediator();
+const mediator = Mediator.getInstance();
 
 class Game extends DefaultGame {
   audioManager: AudioManager; // Аудио менеджер
@@ -19,6 +19,7 @@ class Game extends DefaultGame {
   slowing = 20; // Размер замедления змейки, чем больше значение тем она медленнее, чем меньше, тем быстрее
   gameOver = false; // Закончена ли игра
   score = 0; // Кол-во набранных очков
+  maxCells: number;
 
   init() {
     this.initManagers();
@@ -30,17 +31,14 @@ class Game extends DefaultGame {
   start() {
     this.audioManager.musicPlay('snake');
     this.gameOver = false;
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     requestAnimationFrame(this.update.bind(this));
-  }
-
-  stop() {
-    this.gameOver = true;
   }
 
   restart() {
     this.snake.changeColor('green');
     this.snake.setDefaultValues();
-    this.food.setRandomPosition();
+    this.food.setRandomPosition(this.snake.cells);
     this.start();
   }
 
@@ -54,6 +52,7 @@ class Game extends DefaultGame {
     if (++this.countAnimationFrame < this.slowing) {
       return;
     }
+
     // Обнуляем переменную скорости
     this.countAnimationFrame = 0;
 
@@ -69,7 +68,11 @@ class Game extends DefaultGame {
         this.score++;
         this.storeManager.updateCurrentValue(this.score);
 
-        this.food.setRandomPosition();
+        if (this.isWin()) {
+          this.winGame();
+        } else {
+          this.food.setRandomPosition(this.snake.cells);
+        }
 
         if (this.slowing > 8) {
           this.slowing -= 0.1;
@@ -101,7 +104,7 @@ class Game extends DefaultGame {
   loseGame() {
     this.audioManager.musicStop('snake');
     this.audioManager.musicPlay('lose');
-    this.stop();
+    this.gameOver = true;
 
     mediator.publish('game:lose', this.score);
 
@@ -110,14 +113,26 @@ class Game extends DefaultGame {
   }
 
   winGame() {
-    alert('you win');
+    this.audioManager.musicStop('snake');
+    this.audioManager.musicPlay('win');
+    this.gameOver = true;
+
+    mediator.publish('game:win', this.score);
+
+    this.score = 0;
+    this.storeManager.updateCurrentValue(this.score);
+  }
+
+  private isWin() {
+    return this.snake.cells.length >= this.maxCells;
   }
 
   private initManagers() {
     const musicList = [
       { name: 'snake', file: 'snake.mp3', loop: true },
       { name: 'food', file: 'food.mp3', loop: false },
-      { name: 'lose', file: 'lose.mp3', loop: false }
+      { name: 'lose', file: 'lose.mp3', loop: false },
+      { name: 'win', file: 'win.mp3', loop: false },
     ];
 
     this.audioManager = new AudioManager();
@@ -129,6 +144,7 @@ class Game extends DefaultGame {
   private initElements() {
     this.canvas = <HTMLCanvasElement>document.getElementById('game');
     this.context = this.canvas.getContext('2d');
+    this.maxCells = Math.floor(this.canvas.width / this.grid) * Math.floor(this.canvas.height / this.grid);
 
     const snakeProps = {
       context: this.context,
@@ -150,6 +166,15 @@ class Game extends DefaultGame {
 
   private bindEvents() {
     document.addEventListener('keydown', (event) => {
+      if (event.code === 'Escape') {
+        this.audioManager.musicStop('snake');
+        this.gameOver = true;
+
+        mediator.publish('game:exit');
+
+        return;
+      }
+
       const { dx, dy } = this.snake.getDirection();
 
       switch (event.code) {

@@ -2,15 +2,16 @@ import AudioManager from './AudioManager';
 import GameManager from './GameManager';
 import Mediator from '../helpers/Mediator';
 import Utils from '../helpers/Utils';
-import { GameScore, ResultBlocks, ResultBlocksButton } from '../interfaces';
+import { HelperList, GameScore, ResultBlocks, ResultBlocksButton } from '../interfaces';
 
-const mediator = new Mediator();
+const mediator = Mediator.getInstance();
 
 class UIManager {
   private static instance: UIManager;
   private uiManagerMenu: UIManagerMenu;
   private uiManagerScore: UIManagerScore;
   private uiManagerResult: UIManagerResult;
+  private uiManagerHelper: UIManagerHelper;
 
   public static getInstance(): UIManager {
     if (!UIManager.instance) {
@@ -28,6 +29,7 @@ class UIManager {
     this.uiManagerMenu = new UIManagerMenu();
     this.uiManagerScore = new UIManagerScore();
     this.uiManagerResult = new UIManagerResult();
+    this.uiManagerHelper = new UIManagerHelper();
   }
 
   public setMenuItems(wrapper: HTMLElement, menuButtons: Array<string>) {
@@ -48,6 +50,18 @@ class UIManager {
 
   public playMusic() {
     this.uiManagerMenu.playMusic();
+  }
+
+  public setHelperBlock(helperBlock: HTMLElement) {
+    this.uiManagerHelper.setWrapper(helperBlock);
+  }
+
+  public updateHelperList(helperList: Array<HelperList>) {
+    this.uiManagerHelper.updateHelperList(helperList);
+  }
+
+  public setDefaultHelperList() {
+    this.uiManagerHelper.setDefaultList();
   }
 }
 
@@ -265,7 +279,7 @@ class UIManagerResult {
             const eventName = this.buttons[this.activeIndex].eventName;
 
             this.audioManager.musicPlay('enter');
-            mediator.publish(`result:${eventName}`);
+            mediator.publish(`game:${eventName}`);
           }
 
           break;
@@ -273,6 +287,40 @@ class UIManagerResult {
           break;
       }
     })
+  }
+}
+
+class UIManagerHelper {
+  private wrapper: HTMLElement;
+  private list: Array<HelperList>;
+
+  public setWrapper(wrapper: HTMLElement) {
+    this.wrapper = wrapper;
+  }
+
+  public updateHelperList(list: Array<HelperList>) {
+    this.list = list;
+    this.showList();
+  }
+
+  public setDefaultList() {
+    this.list = [
+      { key: 'arrow up', description: 'Листать вверх' },
+      { key: 'arrow down', description: 'Листать вниз' },
+      { key: 'enter', description: 'Запустить игру' }
+    ];
+    this.showList();
+  }
+
+  private showList() {
+    this.wrapper.innerHTML = '';
+    let text = '';
+
+    this.list.forEach((item) => {
+      text += `<li>${item.key}</li><li>${item.description}</li>`
+    });
+
+    this.wrapper.innerHTML = text;
   }
 }
 

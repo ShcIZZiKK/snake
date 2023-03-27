@@ -1,28 +1,39 @@
+// Managers
 import DefaultGame from '../../abstracts/DefaultGame';
 import AudioManager from '../../managers/AudioManager';
 import StoreManager from '../../managers/StoreManager';
+import Mediator from '../../helpers/Mediator';
+
+// Game elements
 import Tile from './Tile';
 import Background from './Background';
+
+const mediator = Mediator.getInstance();
 
 interface BoardCell {
   value: number;
   isStacked: boolean;
   canMove: boolean;
+  x: number;
+  y: number;
+  id: number;
 }
 
 type board = Array<Array<BoardCell>>;
 
-class Game extends DefaultGame{
+class Game extends DefaultGame {
   audioManager: AudioManager; // Аудио менеджер
   storeManager: StoreManager; // Хранилище очков
   canvas: HTMLCanvasElement; // Html элемент канваса
   context: CanvasRenderingContext2D; // Контекст канваса
-  tile: Tile;
+  tiles: Array<Tile> = [];
   background: Background;
 
   gameOver = false;
   size = 4;
   board: board = [];
+  idAnimated = false;
+  score = 0;
 
   init() {
     this.initManagers();
@@ -35,11 +46,10 @@ class Game extends DefaultGame{
     this.board = this.getEmptyBoard();
     this.generateRandom(this.board);
     this.generateRandom(this.board);
+    this.audioManager.musicPlay('snake');
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.gameOver = false;
     requestAnimationFrame(this.update.bind(this));
-  }
-
-  stop() {
-    console.log('stop');
   }
 
   restart() {
@@ -61,11 +71,27 @@ class Game extends DefaultGame{
 
     this.background.draw();
 
-    for (let row = 0; row < this.size; row++) {
-      for (let column = 0; column < this.size; column++) {
-        this.tile.draw(this.board[row][column].value, column, row);
+    const test = this.board.flat();
+    const allSize = this.size * this.size;
+
+    for (let i = 0; i < allSize; i++) {
+      const tile = this.tiles.find((tile) => tile.id === test[i].id);
+
+      if (test[i].value) {
+        if (tile.x !== test[i].x || tile.y !== test[i].y) {
+          tile.changePosition({
+            x: test[i].x,
+            y: test[i].y
+          });
+        }
       }
+
+      tile.draw(test[i].value);
     }
+
+    const hasAnimatedTile = this.tiles.find((tile) => tile.isAnimated);
+
+    this.idAnimated = !!hasAnimatedTile;
   }
 
   loseGame() {
@@ -73,20 +99,38 @@ class Game extends DefaultGame{
   }
 
   winGame() {
-    console.log('winGame');
+    this.audioManager.musicStop('snake');
+    this.audioManager.musicPlay('win');
+    this.gameOver = true;
+
+    mediator.publish('game:win', this.score);
+
+    this.score = 0;
+    this.storeManager.updateCurrentValue(this.score);
   }
 
   private getEmptyBoard() {
     const newBoard = [];
+    let id = 0;
 
     for (let row = 0; row < this.size; row++) {
       const newRow = [];
+
       for (let column = 0; column < this.size; column++) {
         newRow.push({
           value: 0,
           isStacked: false,
-          canMove: true
+          canMove: true,
+          x: column,
+          y: row,
+          id
         });
+
+        const tile = new Tile(this.context, id, column, row);
+
+        this.tiles.push(tile);
+
+        id++;
       }
 
       newBoard.push(newRow);
@@ -96,9 +140,9 @@ class Game extends DefaultGame{
   }
 
   private hasValue = (board: board, value: number) => {
-    for (let i = 0; i < board.length; i++) {
-      for (let j = 0; j < board[i].length; j++) {
-        if (board[i][j].value === value) {
+    for (let row = 0; row < this.size; row++) {
+      for (let column = 0; column < this.size; column++) {
+        if (board[row][column].value === value) {
           return true;
         }
       }
@@ -107,13 +151,19 @@ class Game extends DefaultGame{
     return false;
   };
 
+  private checkWin = (board: board) => {
+    if (this.hasValue(board, 2048)) {
+      this.winGame();
+    }
+  }
+
   private isFull = (board: board) => {
     return !this.hasValue(board, 0);
   };
 
   private generateRandom(board: board) {
     if (this.isFull(board)) {
-      return board;
+      return;
     }
 
     const randomValueArr = [2, 4];
@@ -127,6 +177,16 @@ class Game extends DefaultGame{
       if (board[randomRow][randomCol].value === 0) {
         board[randomRow][randomCol].value = randomValue;
         isFoundEmptyCell = true;
+
+        const tile = this.tiles.find((tile) => tile.id === board[randomRow][randomCol].id);
+
+        if (tile) {
+          tile.x = board[randomRow][randomCol].x;
+          tile.y = board[randomRow][randomCol].y;
+        }
+
+        this.score += randomValue;
+        this.storeManager.updateCurrentValue(this.score);
       }
     }
 
@@ -158,6 +218,10 @@ class Game extends DefaultGame{
         row[column - 1].value = row[column].value;
         row[column].value = 0;
 
+        const tempId = row[column].id;
+        row[column].id = row[column - 1].id;
+        row[column - 1].id = tempId;
+
         continue;
       }
 
@@ -169,6 +233,10 @@ class Game extends DefaultGame{
         row[column - 1].value = row[column - 1].value * 2;
         row[column].value = 0;
         row[column - 1].isStacked = true;
+
+        const tempId = row[column].id;
+        row[column].id = row[column - 1].id;
+        row[column - 1].id = tempId;
 
         continue;
       }
@@ -199,7 +267,10 @@ class Game extends DefaultGame{
       });
 
       // Получаем новую строку
-      board[row] = Game.mergeRow(this.board[row]);
+      board[row] = Game.mergeRow(board[row]);
+
+      // Добавляем очки за стакнутые ячейки
+      this.addScore(board[row]);
     }
   }
 
@@ -219,6 +290,21 @@ class Game extends DefaultGame{
     return board[0].map((val, index) => board.map(row => row[row.length-1-index]));
   }
 
+  private addScore(row: Array<BoardCell>) {
+    const addScore = row.reduce((sum, acc) => {
+      if (acc.isStacked) {
+        sum += acc.value;
+      }
+
+      return sum;
+    }, 0);
+
+    if (addScore > 0) {
+      this.score += addScore;
+      this.storeManager.updateCurrentValue(this.score);
+    }
+  }
+
   private initManagers() {
     const musicList = [
       { name: 'snake', file: 'snake.mp3', loop: true },
@@ -236,16 +322,27 @@ class Game extends DefaultGame{
     this.canvas = <HTMLCanvasElement>document.getElementById('game');
     this.context = this.canvas.getContext('2d');
 
-    this.tile = new Tile(this.context);
     this.background = new Background(this.context);
   }
 
   private bindEvents() {
     document.addEventListener('keydown', (event) => {
+      if (event.code === 'Escape') {
+        this.audioManager.musicStop('snake');
+        this.gameOver = true;
+
+        mediator.publish('game:exit');
+      }
+
+      if (this.idAnimated || this.gameOver) {
+        return;
+      }
+
       switch (event.code) {
         case 'ArrowLeft':
           this.move(this.board);
           this.generateRandom(this.board);
+          this.checkWin(this.board);
 
           break;
         case 'ArrowUp':
@@ -253,6 +350,7 @@ class Game extends DefaultGame{
           this.move(this.board);
           this.board = this.rotate90deg(this.board,1);
           this.generateRandom(this.board);
+          this.checkWin(this.board);
 
           break;
         case 'ArrowRight':
@@ -260,6 +358,7 @@ class Game extends DefaultGame{
           this.move(this.board);
           this.reverse(this.board);
           this.generateRandom(this.board);
+          this.checkWin(this.board);
 
           break;
         case 'ArrowDown':
@@ -267,6 +366,7 @@ class Game extends DefaultGame{
           this.move(this.board);
           this.board = this.rotate90deg(this.board,-1);
           this.generateRandom(this.board);
+          this.checkWin(this.board);
 
           break;
         default:

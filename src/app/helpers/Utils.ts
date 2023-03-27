@@ -5,7 +5,7 @@ class Utils {
      * @param max
      * @return {*}
      */
-  static getRandomInt(min, max) {
+  static getRandomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min)) + min;
   }
 

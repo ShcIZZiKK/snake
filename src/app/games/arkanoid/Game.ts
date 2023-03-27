@@ -6,7 +6,7 @@ import StoreManager from '../../managers/StoreManager';
 import Mediator from '../../helpers/Mediator';
 import DefaultGame from '../../abstracts/DefaultGame';
 
-const mediator = new Mediator();
+const mediator = Mediator.getInstance();
 
 class Game extends DefaultGame {
   audioManager: AudioManager;
@@ -19,7 +19,7 @@ class Game extends DefaultGame {
   isBallOnPlatform = true;
   gameOver = false;
   currentLevel = 1;
-  allLevelCount = 1;
+  allLevelCount = 2;
   score = 0;
 
   init() {
@@ -33,6 +33,7 @@ class Game extends DefaultGame {
     this.setGameObjectsPositions();
     this.audioManager.musicPlay('ark');
     this.gameOver = false;
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     requestAnimationFrame(this.update.bind(this));
   }
 
@@ -179,6 +180,15 @@ class Game extends DefaultGame {
 
   private bindEvents() {
     document.addEventListener('keydown', (event) => {
+      if (event.code === 'Escape') {
+        this.audioManager.musicStop('ark');
+        this.gameOver = true;
+
+        mediator.publish('game:exit');
+
+        return;
+      }
+
       switch (event.code) {
         case 'ArrowLeft':
           this.platform.changeDirection(-1);

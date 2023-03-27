@@ -3,6 +3,7 @@ import { blockName } from '../types';
 export interface GameObject {
   name: string;
   game: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  helper?: Array<HelperList>;
 }
 
 export interface InterfaceBlock {
@@ -31,4 +32,9 @@ export interface ResultBlocks {
   textWrapper: HTMLElement;
   scoreWrapper: HTMLElement;
   buttons: Array<ResultBlocksButton>;
+}
+
+export interface HelperList {
+  key: string;
+  description: string;
 }

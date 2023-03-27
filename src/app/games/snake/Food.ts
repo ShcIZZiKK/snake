@@ -1,5 +1,10 @@
 import Utils from '../../helpers/Utils';
 
+interface Cell {
+  x: number;
+  y: number;
+}
+
 interface CanvasSize {
   width: number;
   height: number
@@ -26,8 +31,8 @@ class Food {
     this.context = options.context;
     this.foodSize = options.grid;
     this.color = options.color || this.defaultColor;
-    this.x = this.foodSize * 20;
-    this.y = this.foodSize * 20;
+    this.x = this.foodSize;
+    this.y = this.foodSize;
     this.cellCountX = Math.floor(options.size.width / this.foodSize);
     this.cellCountY = Math.floor(options.size.height / this.foodSize);
   }
@@ -43,9 +48,20 @@ class Food {
   /**
    * Задаём рандомную позицию еде
    */
-  setRandomPosition() {
-    this.x = Utils.getRandomInt(0, this.cellCountX) * this.foodSize;
-    this.y = Utils.getRandomInt(0, this.cellCountY) * this.foodSize;
+  setRandomPosition(snakeCells: Array<Cell>) {
+    const randomX = Utils.getRandomInt(0, this.cellCountX) * this.foodSize;
+    const randomY = Utils.getRandomInt(0, this.cellCountY) * this.foodSize;
+
+    for (let i = 0; i < snakeCells.length; i++) {
+      if (snakeCells[i].x === randomX && snakeCells[i].y === randomY) {
+        this.setRandomPosition(snakeCells);
+
+        break;
+      }
+    }
+
+    this.x = randomX;
+    this.y = randomY;
   }
 }
 
