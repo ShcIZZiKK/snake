@@ -3,38 +3,45 @@ class Platform {
   canvasWidth: number;
   x = 175;
   y = 409;
-  speed = 20;
+  maxSpeed = 6;
+  dx = 0;
   width = 90;
   height = 16;
 
-  public init(context: CanvasRenderingContext2D, width: number) {
+  constructor(context: CanvasRenderingContext2D, width: number) {
     this.context = context;
     this.canvasWidth = width;
   }
 
-  public render() {
+  public setDefaultValues() {
+    this.x = 175;
+    this.y = 409;
+  }
+
+  public draw() {
+    this.update();
+
     this.context.fillStyle = 'blue';
     this.context.fillRect(this.x, this.y, this.width, this.height);
   }
 
-  public move(direction: number) {
-    if (this.isOutside(direction)) {
+  public update() {
+    if (this.isOutside()) {
       return;
     }
 
-    console.log(this.x);
-
-    this.x += this.speed * direction;
+    this.x += this.dx;
   }
 
-  private isOutside(direction: number) {
-    if (direction > 0 && this.x + this.width >= this.canvasWidth) {
-      return true;
-    } else if (direction < 0 && this.x <= 0) {
-      return true;
-    }
+  public changeDirection(direction: number) {
+    this.dx = this.maxSpeed * direction;
+  }
 
-    return false;
+  private isOutside() {
+    const rightOutside = this.dx > 0 && this.x + this.width >= this.canvasWidth;
+    const leftOutside = this.dx < 0 && this.x <= 0;
+
+    return rightOutside || leftOutside;
   }
 }
 

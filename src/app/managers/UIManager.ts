@@ -59,7 +59,7 @@ class UIManagerMenu {
 
   constructor() {
     this.initAudioManager();
-    this.subscribes();
+    this.bindEvents();
   }
 
   public createMenuButtons(wrapper: HTMLElement, menuButtons: Array<string>) {
@@ -122,31 +122,38 @@ class UIManagerMenu {
     });
   }
 
-  private subscribes() {
-    mediator.subscribe('keyboard:ArrowUp', () => {
-      if (GameManager.stage !== 'menu') {
-        return;
+  private bindEvents() {
+    document.addEventListener('keydown', (event) => {
+      switch (event.code) {
+        case 'ArrowUp':
+          if (GameManager.stage !== 'menu') {
+            return;
+          }
+
+          this.changeActiveClassMenuButtons('up');
+
+          break;
+        case 'ArrowDown':
+          if (GameManager.stage !== 'menu') {
+            return;
+          }
+
+          this.changeActiveClassMenuButtons('down');
+
+          break;
+        case 'Enter':
+          if (GameManager.stage !== 'menu') {
+            return;
+          }
+
+          this.audioManager.musicStop('menu');
+          this.audioManager.musicPlay('enter');
+          mediator.publish('menu:enter', this.activeIndex);
+
+          break;
+        default:
+          break;
       }
-
-      this.changeActiveClassMenuButtons('up');
-    });
-
-    mediator.subscribe('keyboard:ArrowDown', () => {
-      if (GameManager.stage !== 'menu') {
-        return;
-      }
-
-      this.changeActiveClassMenuButtons('down');
-    });
-
-    mediator.subscribe('keyboard:Enter', () => {
-      if (GameManager.stage !== 'menu') {
-        return;
-      }
-
-      this.audioManager.musicStop('menu');
-      this.audioManager.musicPlay('enter');
-      mediator.publish('menu:enter', this.activeIndex);
     });
   }
 }
@@ -188,7 +195,7 @@ class UIManagerResult {
 
   constructor() {
     this.initAudioManager();
-    this.subscribes();
+    this.bindEvents();
   }
 
   public setBlocks(blocks: ResultBlocks) {
@@ -238,27 +245,34 @@ class UIManagerResult {
     });
   }
 
-  private subscribes() {
-    mediator.subscribe('keyboard:ArrowUp', () => {
-      if (GameManager.stage === 'win' || GameManager.stage === 'lose') {
-        this.changeActiveClassMenuButtons('up');
-      }
-    });
+  private bindEvents() {
+    document.addEventListener('keydown', (event) => {
+      switch (event.code) {
+        case 'ArrowUp':
+          if (GameManager.stage === 'win' || GameManager.stage === 'lose') {
+            this.changeActiveClassMenuButtons('up');
+          }
 
-    mediator.subscribe('keyboard:ArrowDown', () => {
-      if (GameManager.stage === 'win' || GameManager.stage === 'lose') {
-        this.changeActiveClassMenuButtons('down');
-      }
-    });
+          break;
+        case 'ArrowDown':
+          if (GameManager.stage === 'win' || GameManager.stage === 'lose') {
+            this.changeActiveClassMenuButtons('down');
+          }
 
-    mediator.subscribe('keyboard:Enter', () => {
-      if (GameManager.stage === 'win' || GameManager.stage === 'lose') {
-        const eventName = this.buttons[this.activeIndex].eventName;
+          break;
+        case 'Enter':
+          if (GameManager.stage === 'win' || GameManager.stage === 'lose') {
+            const eventName = this.buttons[this.activeIndex].eventName;
 
-        this.audioManager.musicPlay('enter');
-        mediator.publish(`result:${eventName}`);
+            this.audioManager.musicPlay('enter');
+            mediator.publish(`result:${eventName}`);
+          }
+
+          break;
+        default:
+          break;
       }
-    });
+    })
   }
 }
 

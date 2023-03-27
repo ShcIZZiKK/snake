@@ -1,13 +1,16 @@
 import Platform from './Platform';
 import Ball from './Ball';
 import Blocks from './Blocks';
-import Mediator from '../../helpers/Mediator';
 import AudioManager from '../../managers/AudioManager';
+import StoreManager from '../../managers/StoreManager';
+import Mediator from '../../helpers/Mediator';
+import DefaultGame from '../../abstracts/DefaultGame';
 
 const mediator = new Mediator();
 
-class Game {
+class Game extends DefaultGame {
   audioManager: AudioManager;
+  storeManager: StoreManager;
   canvas: HTMLCanvasElement;
   context: CanvasRenderingContext2D;
   platform: Platform;
@@ -15,107 +18,194 @@ class Game {
   blocks: Blocks;
   isBallOnPlatform = true;
   gameOver = false;
+  currentLevel = 1;
+  allLevelCount = 1;
+  score = 0;
 
   init() {
-    this.initAudioManager();
+    this.initManagers();
     this.initElements();
-    this.subscribes();
+    this.bindEvents();
+    this.start();
   }
 
-  public start() {
+  start() {
+    this.setGameObjectsPositions();
     this.audioManager.musicPlay('ark');
     this.gameOver = false;
-    requestAnimationFrame(this.render.bind(this));
+    requestAnimationFrame(this.update.bind(this));
   }
 
-  private initAudioManager() {
+  restart() {
+    this.start();
+  }
+
+  loseGame() {
+    this.audioManager.musicStop('ark');
+    this.audioManager.musicPlay('lose');
+    this.gameOver = true;
+
+    mediator.publish('game:lose', this.score);
+
+    this.score = 0;
+    this.storeManager.updateCurrentValue(this.score);
+  }
+
+  winGame() {
+    this.audioManager.musicStop('ark');
+    this.audioManager.musicPlay('win');
+    this.gameOver = true;
+
+    mediator.publish('game:win', this.score);
+
+    this.score = 0;
+    this.storeManager.updateCurrentValue(this.score);
+  }
+
+  update() {
+    if (this.gameOver) {
+      return;
+    }
+
+    requestAnimationFrame(this.update.bind(this));
+
+    if (this.isBallOnPlatform) {
+      this.ball.followForPlatform(this.platform.x, this.platform.width);
+    } else {
+      this.ball.move();
+      this.checkCollisionBlocks();
+      this.checkCollisionPlatform();
+    }
+
+    this.draw();
+  }
+
+  draw() {
+    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+    this.platform.draw();
+    this.ball.draw();
+    this.blocks.draw();
+  }
+
+  private setGameObjectsPositions() {
+    this.isBallOnPlatform = true;
+    this.currentLevel = 1;
+    this.blocks.create(this.currentLevel);
+    this.platform.setDefaultValues();
+    this.ball.setDefaultValues();
+  }
+
+  private checkCollisionBlocks() {
+    this.blocks.items.forEach((block) => {
+      if (block.lives < 1) {
+        return;
+      }
+
+      if (!this.ball.checkCollision(block)) {
+        return;
+      }
+
+      this.audioManager.musicPlay('food');
+      this.ball.revertDirectionY();
+
+      block.lives--;
+
+      if (block.lives <= 0) {
+        this.score++;
+        this.storeManager.updateCurrentValue(this.score);
+        this.checkWin();
+      }
+    });
+  }
+
+  private checkCollisionPlatform() {
+    if (!this.ball.checkCollision(this.platform)) {
+      return;
+    }
+
+    this.audioManager.musicPlay('food');
+
+    this.ball.setDirectionY(-1);
+    this.ball.checkVelocityX(this.platform);
+  }
+
+  private checkWin() {
+    const aliveBlock = this.blocks.items.filter((item) => item.lives > 0);
+
+    if (aliveBlock.length) {
+      return;
+    }
+
+    this.nextLevel();
+  }
+
+  private nextLevel() {
+    if (this.currentLevel >= this.allLevelCount) {
+      this.winGame();
+
+      return;
+    }
+
+    this.currentLevel++;
+    this.isBallOnPlatform = true;
+    this.blocks.create(this.currentLevel);
+    this.platform.setDefaultValues();
+    this.ball.setDefaultValues();
+  }
+
+  private initManagers() {
     const musicList = [
       { name: 'ark', file: 'ark.mp3', loop: true },
       { name: 'food', file: 'food.mp3', loop: false },
-      { name: 'lose', file: 'lose.mp3', loop: false }
+      { name: 'lose', file: 'lose.mp3', loop: false },
+      { name: 'win', file: 'win.mp3', loop: false }
     ];
 
     this.audioManager = new AudioManager();
     this.audioManager.addMusicList(musicList);
-  }
 
-  private render() {
-    requestAnimationFrame(this.render.bind(this));
-
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    if (!this.isBallOnPlatform) {
-      this.ball.move();
-
-      const nextYPositionBall = this.ball.y + this.ball.speed;
-      const nextXPositionBall = this.ball.x + this.ball.speed;
-
-      this.blocks.items.forEach((block) => {
-        if (block.isAlive &&
-          nextXPositionBall + this.ball.radius > block.x &&
-          nextXPositionBall < block.x + block.width &&
-          nextYPositionBall + this.ball.radius > block.y &&
-          nextYPositionBall < block.y + block.height
-        ) {
-          this.audioManager.musicPlay('food');
-          block.isAlive = false;
-          this.ball.setDirectionY(1);
-        }
-      });
-
-      if (nextXPositionBall + this.ball.radius > this.platform.x &&
-        nextXPositionBall < this.platform.x + this.platform.width &&
-        nextYPositionBall + this.ball.radius > this.platform.y &&
-        nextYPositionBall < this.platform.y + this.platform.height
-      ) {
-        this.audioManager.musicPlay('food');
-        this.ball.setDirectionY(-1);
-        const xDir = this.ball.x > (this.platform.x + this.platform.width / 2) ? 1 : -1;
-
-        console.log(xDir);
-
-        this.ball.setDirectionX(xDir);
-      }
-    }
-
-    this.platform.render();
-    this.ball.render();
-    this.blocks.render();
+    this.storeManager = new StoreManager('arkanoid');
   }
 
   private initElements() {
     this.canvas = <HTMLCanvasElement>document.getElementById('game');
     this.context = this.canvas.getContext('2d');
 
-    this.platform = new Platform();
-    this.ball = new Ball();
-    this.blocks = new Blocks();
-
-    this.platform.init(this.context, this.canvas.width);
-    this.ball.init(this.context);
-    this.blocks.init(this.context);
+    this.platform = new Platform(this.context, this.canvas.width);
+    this.ball = new Ball(this.context, this);
+    this.blocks = new Blocks(this.context);
   }
 
-  private subscribes() {
-    mediator.subscribe('keyboard:ArrowLeft', () => {
-      this.platform.move(-1);
+  private bindEvents() {
+    document.addEventListener('keydown', (event) => {
+      switch (event.code) {
+        case 'ArrowLeft':
+          this.platform.changeDirection(-1);
 
-      if (this.isBallOnPlatform) {
-        this.ball.followForPlatform(this.platform.x, this.platform.width);
+          break;
+        case 'ArrowRight':
+          this.platform.changeDirection(1);
+
+          break;
+        case 'Space':
+          if (!this.isBallOnPlatform) {
+            return;
+          }
+
+          this.isBallOnPlatform = false;
+          this.ball.setDirectionY(-1);
+          this.ball.setDirectionX(-1);
+
+          break;
+        default:
+          break;
       }
     });
 
-    mediator.subscribe('keyboard:ArrowRight', () => {
-      this.platform.move(1);
-
-      if (this.isBallOnPlatform) {
-        this.ball.followForPlatform(this.platform.x, this.platform.width);
-      }
-    });
-
-    mediator.subscribe('keyboard:Space', () => {
-      if (this.isBallOnPlatform) {
-        this.isBallOnPlatform = false;
+    document.addEventListener('keyup', (event) => {
+      if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+        this.platform.changeDirection(0);
       }
     });
   }

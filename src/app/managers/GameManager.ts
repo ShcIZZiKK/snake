@@ -1,4 +1,3 @@
-import InputManager from './InputManager';
 import UIManager from './UIManager';
 import VisibilityManager from './VisibilityManager';
 import Mediator from '../helpers/Mediator';
@@ -13,7 +12,7 @@ class GameManager {
   private visibilityManager: VisibilityManager;
   private uiManager: UIManager;
   private activeGame: GameObject;
-  private gamesList: Array<GameObject>;
+  private readonly gamesList: Array<GameObject>;
 
   private gameWrapper: HTMLElement;
   private menuWrapper: HTMLElement;
@@ -26,24 +25,19 @@ class GameManager {
   private resultButtonRestart: HTMLElement;
   private resultButtonExit: HTMLElement;
 
-  public static getInstance(): GameManager {
+  public static init(games: Array<GameObject>) {
     if (!GameManager.instance) {
-      GameManager.instance = new GameManager();
+      GameManager.instance = new GameManager(games);
     }
-
-    return GameManager.instance;
   }
 
-  public init() {
+  private constructor(games: Array<GameObject>) {
+    this.gamesList = games;
+
     this.getElements();
     this.subscribes();
     this.initUIManager();
     this.initVisibilityManager();
-    this.initInputManager();
-  }
-
-  public setGamesList(games: Array<GameObject>) {
-    this.gamesList = games;
   }
 
   public updateStage(stage: stage) {
@@ -109,23 +103,26 @@ class GameManager {
     this.visibilityManager.setBlocks(blocks);
   }
 
-  private initInputManager() {
-    InputManager.getInstance();
-  }
-
   private subscribes() {
     mediator.subscribe('menu:enter', (index: number) => {
       this.activeGame = this.gamesList[index];
 
-      this.updateStage('game');
+      if (!this.activeGame?.game) {
+        return;
+      }
 
+      this.updateStage('game');
       this.activeGame.game.init();
-      this.activeGame.game.start();
     });
 
     mediator.subscribe('game:lose', (score: number) => {
       this.updateStage('lose');
       this.uiManager.setResult('lose', score);
+    });
+
+    mediator.subscribe('game:win', (score: number) => {
+      this.updateStage('win');
+      this.uiManager.setResult('win', score);
     });
 
     mediator.subscribe('result:restart', () => {

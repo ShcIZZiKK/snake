@@ -15,10 +15,6 @@ export interface GameScore {
   max: number;
 }
 
-export interface GameScoreStoreItem extends GameScore {
-  name: string;
-}
-
 export interface Sound {
   name: string;
   file: string;

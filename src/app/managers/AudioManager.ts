@@ -44,6 +44,7 @@ class AudioManager {
 
     if (loop) {
       manager.loop = true;
+      manager.volume = 0.3;
     }
 
     return manager;

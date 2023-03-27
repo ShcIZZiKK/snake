@@ -3,9 +3,11 @@ import GameManager from './managers/GameManager';
 // Games
 import GameSnake from './games/snake/Game';
 import GameArkanoid from './games/arkanoid/Game';
+import Game2048 from './games/2048/Game';
 
 const gameSnake = new GameSnake();
 const gameArkanoid = new GameArkanoid();
+const game2048 = new Game2048();
 
 const games = [
   {
@@ -14,7 +16,7 @@ const games = [
   },
   {
     name: '2048',
-    game: null,
+    game: game2048,
   },
   {
     name: 'arkanoid',
@@ -22,10 +24,6 @@ const games = [
   },
 ];
 
-const gameManager = GameManager.getInstance();
-
-gameManager.setGamesList(games);
-
 window.addEventListener('load', () => {
-  gameManager.init();
+  GameManager.init(games);
 });
