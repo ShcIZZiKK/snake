@@ -1,10 +1,9 @@
 class Tile {
   context: CanvasRenderingContext2D;
-  width = 40;
-  height = 40;
-  padding = 5;
+  width = 105;
+  height = 105;
+  padding = 4;
   colors = {
-    0: 'gray',
     2: '#a7d3fa',
     4: '#82c2fa',
     8: '#ffa500',
@@ -23,6 +22,10 @@ class Tile {
   }
 
   public draw(value: number, x: number, y: number) {
+    if (!value) {
+      return;
+    }
+
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     this.context.fillStyle = this.colors[value];
@@ -30,8 +33,26 @@ class Tile {
     const posY = (this.height * y) + (this.padding * y) + this.padding;
     this.context.fillRect(posX, posY, this.width, this.height);
     this.context.fillStyle = 'white';
-    this.context.font = "12px serif";
-    this.context.fillText(value.toString(), posX + 16, posY + 20);
+    this.context.textBaseline = "top";
+    this.context.font = "52px Pixeboy";
+    let left = 0;
+
+    switch (true) {
+    case value < 10:
+      left = 40;
+      break;
+    case value < 100:
+      left = 30;
+      break;
+    case value < 1000:
+      left = 18;
+      break;
+    default:
+      left = 6;
+      break;
+    }
+
+    this.context.fillText(value.toString(), posX + left, posY + 15);
   }
 }
 
