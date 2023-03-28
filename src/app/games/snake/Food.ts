@@ -1,29 +1,16 @@
+// Helpers
 import Utils from '../../helpers/Utils';
 
-interface Cell {
-  x: number;
-  y: number;
-}
-
-interface CanvasSize {
-  width: number;
-  height: number
-}
-
-interface FoodOptions {
-  context: CanvasRenderingContext2D;
-  grid: number;
-  color: string;
-  size: CanvasSize
-}
+// Interfaces
+import { Cell, FoodOptions } from '../../interfaces/games/snake';
 
 class Food {
   context: CanvasRenderingContext2D; // Контекст канваса
   x = 0; // Начальная координата еды по X
   y = 0; // Начальная координата еды по Y
-  color: string; // Цвет змейки
-  defaultColor = 'red'; // Цвет змейки по умолчанию
-  foodSize: number; // Размер ячейки змейки
+  color: string; // Цвет еды
+  defaultColor = 'red'; // Цвет еды по умолчанию
+  foodSize: number; // Размер ячейки еды
   cellCountX: number; // Количество ячеек где можем разместить еду по x
   cellCountY: number; // Количество ячеек где можем разместить еду по y
 
@@ -52,6 +39,8 @@ class Food {
     const randomX = Utils.getRandomInt(0, this.cellCountX) * this.foodSize;
     const randomY = Utils.getRandomInt(0, this.cellCountY) * this.foodSize;
 
+    // Проверяем, не совпадает ли новая позиция с ячейкой занимаемой змейков
+    // Если совпадает, повторно задаём позицию
     for (let i = 0; i < snakeCells.length; i++) {
       if (snakeCells[i].x === randomX && snakeCells[i].y === randomY) {
         this.setRandomPosition(snakeCells);

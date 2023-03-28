@@ -1,8 +1,9 @@
+import DefaultGame from '../abstracts/DefaultGame';
 import { blockName } from '../types';
 
 export interface GameObject {
   name: string;
-  game: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  game: DefaultGame;
   helper?: Array<HelperList>;
 }
 
@@ -20,6 +21,7 @@ export interface Sound {
   name: string;
   file: string;
   loop: boolean;
+  volume?: number;
   manager?: HTMLAudioElement;
 }
 

@@ -1,53 +1,35 @@
+// Helpers
+import DefaultGame from '../../abstracts/DefaultGame';
+import Mediator from '../../helpers/Mediator';
+
+// Game elements
 import Snake from './Snake';
 import Food from './Food';
-import AudioManager from '../../managers/AudioManager';
-import StoreManager from '../../managers/StoreManager';
-import Mediator from '../../helpers/Mediator';
-import DefaultGame from '../../abstracts/DefaultGame';
 
+// Custom
 const mediator = Mediator.getInstance();
 
 class Game extends DefaultGame {
-  audioManager: AudioManager; // Аудио менеджер
-  storeManager: StoreManager; // Хранилище очков
-  canvas: HTMLCanvasElement; // Html элемент канваса
-  context: CanvasRenderingContext2D; // Контекст канваса
   snake: Snake; // Экземпляр змейки
   food: Food; // Экземпляр еды
   grid = 20; // Размер одной клеточки на поле
   countAnimationFrame = 0; // Техническая переменная для ограничения скорости змейки
   slowing = 20; // Размер замедления змейки, чем больше значение тем она медленнее, чем меньше, тем быстрее
-  gameOver = false; // Закончена ли игра
-  score = 0; // Кол-во набранных очков
-  maxCells: number;
+  maxCells: number; // Кол-во очков для победы
 
-  init() {
-    this.initManagers();
-    this.initElements();
-    this.bindEvents();
-    this.start();
+  /**
+   * Останавливает игру
+   */
+  stop() {
+    super.stop();
+    this.audioManager.musicStop('snake');
   }
 
-  start() {
-    this.audioManager.musicPlay('snake');
-    this.gameOver = false;
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    requestAnimationFrame(this.update.bind(this));
-  }
-
-  restart() {
-    this.snake.changeColor('green');
-    this.snake.setDefaultValues();
-    this.food.setRandomPosition(this.snake.cells);
-    this.start();
-  }
-
+  /**
+   * Логика игры
+   */
   update() {
-    if (this.gameOver) {
-      return;
-    }
-
-    requestAnimationFrame(this.update.bind(this));
+    super.update();
 
     if (++this.countAnimationFrame < this.slowing) {
       return;
@@ -69,7 +51,7 @@ class Game extends DefaultGame {
         this.storeManager.updateCurrentValue(this.score);
 
         if (this.isWin()) {
-          this.winGame();
+          this.changeStatusGame('win');
         } else {
           this.food.setRandomPosition(this.snake.cells);
         }
@@ -84,12 +66,22 @@ class Game extends DefaultGame {
         if (cell.x === this.snake.cells[i].x && cell.y === this.snake.cells[i].y) {
           this.snake.changeColor('orange');
           this.snake.drawSnake();
-          this.loseGame();
+          this.changeStatusGame('lose');
         }
       }
     });
   }
 
+  /**
+   * Выполняет действия при подебе/проигрыше
+   */
+  changeStatusGame(status: string) {
+    super.changeStatusGame(status, 'snake');
+  }
+
+  /**
+   * Отрисовка игры
+   */
   draw() {
     // Очищаем игровое поле
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -101,49 +93,45 @@ class Game extends DefaultGame {
     this.snake.draw();
   }
 
-  loseGame() {
-    this.audioManager.musicStop('snake');
-    this.audioManager.musicPlay('lose');
-    this.gameOver = true;
+  /**
+   * Устанавливает начальные значения для игры
+   * @private
+   */
+  setDefaultValues() {
+    super.setDefaultValues();
 
-    mediator.publish('game:lose', this.score);
+    this.countAnimationFrame = 0;
+    this.slowing = 20;
 
-    this.score = 0;
-    this.storeManager.updateCurrentValue(this.score);
+    this.snake.changeColor('green');
+    this.snake.setDefaultValues();
+    this.food.setRandomPosition(this.snake.cells);
+
+    this.audioManager.musicPlay('snake');
   }
 
-  winGame() {
-    this.audioManager.musicStop('snake');
-    this.audioManager.musicPlay('win');
-    this.gameOver = true;
+  /**
+   * Инициализация менеджеров
+   */
+  initManagers() {
+    super.initManagers('snake');
 
-    mediator.publish('game:win', this.score);
-
-    this.score = 0;
-    this.storeManager.updateCurrentValue(this.score);
-  }
-
-  private isWin() {
-    return this.snake.cells.length >= this.maxCells;
-  }
-
-  private initManagers() {
     const musicList = [
-      { name: 'snake', file: 'snake.mp3', loop: true },
+      { name: 'snake', file: 'snake.mp3', loop: true, volume: 0.3 },
       { name: 'food', file: 'food.mp3', loop: false },
       { name: 'lose', file: 'lose.mp3', loop: false },
       { name: 'win', file: 'win.mp3', loop: false },
     ];
 
-    this.audioManager = new AudioManager();
     this.audioManager.addMusicList(musicList);
-
-    this.storeManager = new StoreManager('snake');
   }
 
-  private initElements() {
-    this.canvas = <HTMLCanvasElement>document.getElementById('game');
-    this.context = this.canvas.getContext('2d');
+  /**
+   * Инициализация элементов игры
+   */
+  initElements() {
+    super.initElements();
+
     this.maxCells = Math.floor(this.canvas.width / this.grid) * Math.floor(this.canvas.height / this.grid);
 
     const snakeProps = {
@@ -164,48 +152,55 @@ class Game extends DefaultGame {
     this.food = new Food(foodProps);
   }
 
-  private bindEvents() {
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'Escape') {
-        this.audioManager.musicStop('snake');
-        this.gameOver = true;
+  /**
+   * Обработчик событий нажатия кнопок
+   * @param event
+   */
+  eventsKeyDown(event?: KeyboardEvent) {
+    if (event.code === 'Escape') {
+      mediator.publish('game:exit');
+      return;
+    }
 
-        mediator.publish('game:exit');
+    const { dx, dy } = this.snake.getDirection();
 
-        return;
+    switch (event.code) {
+    case 'ArrowLeft':
+      if (dx === 0) {
+        this.snake.setDirection(-this.grid, 0);
       }
 
-      const { dx, dy } = this.snake.getDirection();
-
-      switch (event.code) {
-        case 'ArrowLeft':
-          if (dx === 0) {
-            this.snake.setDirection(-this.grid, 0);
-          }
-
-          break;
-        case 'ArrowUp':
-          if (dy === 0) {
-            this.snake.setDirection(0, -this.grid);
-          }
-
-          break;
-        case 'ArrowRight':
-          if (dx === 0) {
-            this.snake.setDirection(this.grid, 0);
-          }
-
-          break;
-        case 'ArrowDown':
-          if (dy === 0) {
-            this.snake.setDirection(0, this.grid);
-          }
-
-          break;
-        default:
-          break;
+      break;
+    case 'ArrowUp':
+      if (dy === 0) {
+        this.snake.setDirection(0, -this.grid);
       }
-    });
+
+      break;
+    case 'ArrowRight':
+      if (dx === 0) {
+        this.snake.setDirection(this.grid, 0);
+      }
+
+      break;
+    case 'ArrowDown':
+      if (dy === 0) {
+        this.snake.setDirection(0, this.grid);
+      }
+
+      break;
+    default:
+      break;
+    }
+  }
+
+  /**
+   * Проверка на победу
+   * Если длина змейки равна кол-ву очков для победы, то игрок победил
+   * @private
+   */
+  private isWin() {
+    return this.snake.cells.length >= this.maxCells;
   }
 }
 

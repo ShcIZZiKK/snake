@@ -1,19 +1,17 @@
-interface Position {
-  x: number;
-  y: number;
-}
+// Interfaces
+import { Position, TileOptions } from '../../interfaces/games/2048';
 
 class Tile {
-  context: CanvasRenderingContext2D;
-  id: number;
-  newX = 0;
-  newY = 0;
-  x = 0;
-  y = 0;
-  speed = 0.4;
-  width = 105;
-  height = 105;
-  padding = 4;
+  context: CanvasRenderingContext2D; // Контекст канваса
+  id: number; // id плитки
+  newX = 0; // Новая позиция плитки по Х
+  newY = 0; // Новая позиция плитки по Y
+  x = 0; // Текущая позиция плитки по Х
+  y = 0; // Текущая позиция плитки по Y
+  speed = 0.4; // Скорость движения плитки
+  width: number; // Ширина плитки
+  height: number; // Высота плитки
+  padding: number; // Расстояние между плитками плитки
   colors = {
     2: '#a7d3fa',
     4: '#82c2fa',
@@ -26,16 +24,23 @@ class Tile {
     512: '#ff009d',
     1024: '#fc0061',
     2048: '#fa0000'
-  };
-  isAnimated = false;
+  }; // Список цветов
+  isAnimated = false; // Идёт ли сейчас анимация смещения плитки
 
-  constructor(context: CanvasRenderingContext2D, id: number, x: number, y: number) {
-    this.context = context;
-    this.id = id;
-    this.x = x;
-    this.y = y;
+  constructor(options: TileOptions) {
+    this.context = options.context;
+    this.id = options.id;
+    this.x = options.x;
+    this.y = options.y;
+    this.width = options.width;
+    this.height = options.height;
+    this.padding = options.padding;
   }
 
+  /**
+   * Задаёт новую позицию плитке
+   * @param newPos
+   */
   public changePosition(newPos: Position) {
     this.newX = newPos.x;
     this.newY = newPos.y;
@@ -43,52 +48,16 @@ class Tile {
     this.isAnimated = true;
   }
 
+  /**
+   * Рисует плитку
+   * @param value
+   */
   public draw(value: number) {
     if (!value) {
       return;
     }
 
-    if (this.isAnimated) {
-      switch (true) {
-        case this.x < this.newX:
-          this.x += this.speed;
-
-          if (this.x > this.newX) {
-            this.x = this.newX;
-          }
-
-          break;
-        case this.x > this.newX:
-          this.x -= this.speed;
-
-          if (this.x < this.newX) {
-            this.x = this.newX;
-          }
-          break;
-        case this.y < this.newY:
-          this.y += this.speed;
-
-          if (this.y > this.newY) {
-            this.y = this.newY;
-          }
-          break;
-        case this.y > this.newY:
-          this.y -= this.speed;
-
-          if (this.y < this.newY) {
-            this.y = this.newY;
-          }
-          break;
-        default:
-          break;
-      }
-
-      if (this.x === this.newX && this.y === this.newY) {
-        this.isAnimated = false;
-
-        return;
-      }
-    }
+    this.animateTile();
 
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
@@ -99,7 +68,7 @@ class Tile {
     this.context.fillStyle = 'white';
     this.context.textBaseline = "top";
     this.context.font = "52px Pixeboy";
-    let left = 0;
+    let left; // Сдвиг текста от левого края плитки
 
     switch (true) {
       case value < 10:
@@ -117,6 +86,53 @@ class Tile {
     }
 
     this.context.fillText(value.toString(), posX + left, posY + 15);
+  }
+
+  /**
+   * Если запущена анимация, смещает плитку
+   */
+  private animateTile() {
+    if (this.isAnimated) {
+      switch (true) {
+      case this.x < this.newX:
+        this.x += this.speed;
+
+        if (this.x > this.newX) {
+          this.x = this.newX;
+        }
+
+        break;
+      case this.x > this.newX:
+        this.x -= this.speed;
+
+        if (this.x < this.newX) {
+          this.x = this.newX;
+        }
+        break;
+      case this.y < this.newY:
+        this.y += this.speed;
+
+        if (this.y > this.newY) {
+          this.y = this.newY;
+        }
+        break;
+      case this.y > this.newY:
+        this.y -= this.speed;
+
+        if (this.y < this.newY) {
+          this.y = this.newY;
+        }
+        break;
+      default:
+        break;
+      }
+
+      if (this.x === this.newX && this.y === this.newY) {
+        this.isAnimated = false;
+
+        return;
+      }
+    }
   }
 }
 

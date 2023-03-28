@@ -1,74 +1,45 @@
+// Managers
+import DefaultGame from '../../abstracts/DefaultGame';
+import Mediator from '../../helpers/Mediator';
+
+// Game elements
 import Platform from './Platform';
 import Ball from './Ball';
 import Blocks from './Blocks';
-import AudioManager from '../../managers/AudioManager';
-import StoreManager from '../../managers/StoreManager';
-import Mediator from '../../helpers/Mediator';
-import DefaultGame from '../../abstracts/DefaultGame';
 
+// Custom
 const mediator = Mediator.getInstance();
 
 class Game extends DefaultGame {
-  audioManager: AudioManager;
-  storeManager: StoreManager;
-  canvas: HTMLCanvasElement;
-  context: CanvasRenderingContext2D;
-  platform: Platform;
-  ball: Ball;
-  blocks: Blocks;
-  isBallOnPlatform = true;
-  gameOver = false;
-  currentLevel = 1;
-  allLevelCount = 2;
-  score = 0;
+  platform: Platform; // Экземпляр платформы
+  ball: Ball; // Экземпляр мяча
+  blocks: Blocks; // Экземпляр блоков
 
-  init() {
-    this.initManagers();
-    this.initElements();
-    this.bindEvents();
-    this.start();
-  }
+  isBallOnPlatform = true; // Флаг, что мяч должен двигаться вместе с платформой
+  currentLevel = 1; // Текущий уровень игры
+  allLevelCount = 2; // Кол-во уровней
+  eventsUpFunction: () => void; // Фунция для евентов отпускания кнопок
 
-  start() {
-    this.setGameObjectsPositions();
-    this.audioManager.musicPlay('ark');
-    this.gameOver = false;
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    requestAnimationFrame(this.update.bind(this));
-  }
-
-  restart() {
-    this.start();
-  }
-
-  loseGame() {
+  /**
+   * Останавливает игру
+   */
+  stop() {
+    super.stop();
     this.audioManager.musicStop('ark');
-    this.audioManager.musicPlay('lose');
-    this.gameOver = true;
-
-    mediator.publish('game:lose', this.score);
-
-    this.score = 0;
-    this.storeManager.updateCurrentValue(this.score);
   }
 
-  winGame() {
-    this.audioManager.musicStop('ark');
-    this.audioManager.musicPlay('win');
-    this.gameOver = true;
-
-    mediator.publish('game:win', this.score);
-
-    this.score = 0;
-    this.storeManager.updateCurrentValue(this.score);
+  /**
+   * Выполняет действия при подебе/проигрыше
+   */
+  changeStatusGame(status: string) {
+    super.changeStatusGame(status, 'ark');
   }
 
+  /**
+   * Логика игры
+   */
   update() {
-    if (this.gameOver) {
-      return;
-    }
-
-    requestAnimationFrame(this.update.bind(this));
+    super.update();
 
     if (this.isBallOnPlatform) {
       this.ball.followForPlatform(this.platform.x, this.platform.width);
@@ -81,6 +52,9 @@ class Game extends DefaultGame {
     this.draw();
   }
 
+  /**
+   * Отрисовка игры
+   */
   draw() {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
@@ -89,14 +63,147 @@ class Game extends DefaultGame {
     this.blocks.draw();
   }
 
-  private setGameObjectsPositions() {
-    this.isBallOnPlatform = true;
+  /**
+   * Устанавливает начальные значения для игры
+   */
+  setDefaultValues() {
+    super.setDefaultValues();
+
+    this.setDefaultPositions();
+
     this.currentLevel = 1;
+    this.audioManager.musicPlay('ark');
+  }
+
+  /**
+   * Инициализация менеджеров
+   */
+  initManagers() {
+    super.initManagers('arkanoid');
+
+    const musicList = [
+      { name: 'ark', file: 'ark.mp3', loop: true, volume: 0.3 },
+      { name: 'food', file: 'food.mp3', loop: false },
+      { name: 'lose', file: 'lose.mp3', loop: false },
+      { name: 'win', file: 'win.mp3', loop: false }
+    ];
+
+    this.audioManager.addMusicList(musicList);
+  }
+
+  /**
+   * Инициализация элементов игры
+   */
+  initElements() {
+    super.initElements();
+
+    const platformOptions = {
+      context: this.context,
+      canvasWidth: this.canvas.width
+    }
+
+    const ballOptions = {
+      context: this.context,
+      callbackLose: this.changeStatusGame.bind(this),
+      canvasSize: {
+        width: this.canvas.width,
+        height: this.canvas.height,
+      }
+    }
+
+    this.platform = new Platform(platformOptions);
+    this.ball = new Ball(ballOptions);
+    this.blocks = new Blocks(this.context);
+  }
+
+  /**
+   * Регистрирует функцию привязывая контекст, для обработкой эвентов клика
+   */
+  initEvents() {
+    super.initEvents();
+
+    this.eventsUpFunction = this.eventsKeyUp.bind(this);
+  }
+
+  /**
+   * Навешивает обработчики событий
+   */
+  bindEvents() {
+    super.bindEvents();
+
+    document.addEventListener('keyup', this.eventsUpFunction);
+  }
+
+  /**
+   * Удаляет обработчики событий
+   */
+  removeEvents() {
+    super.removeEvents();
+
+    document.removeEventListener('keyup', this.eventsUpFunction);
+  }
+
+  /**
+   * Обработчик событий нажатия кнопок
+   * @param event
+   */
+  eventsKeyDown(event?: KeyboardEvent) {
+    if (event.code === 'Escape') {
+      mediator.publish('game:exit');
+
+      return;
+    }
+
+    switch (event.code) {
+      case 'ArrowLeft':
+        this.platform.changeDirection(-1);
+
+        break;
+      case 'ArrowRight':
+        this.platform.changeDirection(1);
+
+        break;
+      case 'Space':
+        if (!this.isBallOnPlatform) {
+          return;
+        }
+
+        this.isBallOnPlatform = false;
+        this.ball.setDirectionY(-1);
+        this.ball.setDirectionX(-1);
+
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Обработчик событий отпускания кнопок кнопок
+   * @param event
+   * @private
+   */
+  private eventsKeyUp(event: KeyboardEvent) {
+    if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
+      this.platform.changeDirection(0);
+    }
+  }
+
+  /**
+   * Устанавливает значения по умолчанию для объектов игры
+   * @private
+   */
+  private setDefaultPositions() {
+    this.isBallOnPlatform = true;
     this.blocks.create(this.currentLevel);
     this.platform.setDefaultValues();
     this.ball.setDefaultValues();
   }
 
+  /**
+   * Проверка столкновения мяча и блоков
+   * @private
+   */
   private checkCollisionBlocks() {
     this.blocks.items.forEach((block) => {
       if (block.lives < 1) {
@@ -120,6 +227,10 @@ class Game extends DefaultGame {
     });
   }
 
+  /**
+   * Проверка столкновения мяча и платформы
+   * @private
+   */
   private checkCollisionPlatform() {
     if (!this.ball.checkCollision(this.platform)) {
       return;
@@ -127,10 +238,15 @@ class Game extends DefaultGame {
 
     this.audioManager.musicPlay('food');
 
-    this.ball.setDirectionY(-1);
     this.ball.checkVelocityX(this.platform);
+    this.ball.setDirectionY(-1);
   }
 
+  /**
+   * Проверяет игру на победу
+   * Если не осталось живых блоков, переходим к следующему уровню
+   * @private
+   */
   private checkWin() {
     const aliveBlock = this.blocks.items.filter((item) => item.lives > 0);
 
@@ -141,83 +257,22 @@ class Game extends DefaultGame {
     this.nextLevel();
   }
 
+  /**
+   * Переход к следующему уровню
+   * @private
+   */
   private nextLevel() {
+    /**
+     * Если текущий уровень был последним, то игрок победил
+     */
     if (this.currentLevel >= this.allLevelCount) {
-      this.winGame();
+      this.changeStatusGame('win');
 
       return;
     }
 
     this.currentLevel++;
-    this.isBallOnPlatform = true;
-    this.blocks.create(this.currentLevel);
-    this.platform.setDefaultValues();
-    this.ball.setDefaultValues();
-  }
-
-  private initManagers() {
-    const musicList = [
-      { name: 'ark', file: 'ark.mp3', loop: true },
-      { name: 'food', file: 'food.mp3', loop: false },
-      { name: 'lose', file: 'lose.mp3', loop: false },
-      { name: 'win', file: 'win.mp3', loop: false }
-    ];
-
-    this.audioManager = new AudioManager();
-    this.audioManager.addMusicList(musicList);
-
-    this.storeManager = new StoreManager('arkanoid');
-  }
-
-  private initElements() {
-    this.canvas = <HTMLCanvasElement>document.getElementById('game');
-    this.context = this.canvas.getContext('2d');
-
-    this.platform = new Platform(this.context, this.canvas.width);
-    this.ball = new Ball(this.context, this);
-    this.blocks = new Blocks(this.context);
-  }
-
-  private bindEvents() {
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'Escape') {
-        this.audioManager.musicStop('ark');
-        this.gameOver = true;
-
-        mediator.publish('game:exit');
-
-        return;
-      }
-
-      switch (event.code) {
-        case 'ArrowLeft':
-          this.platform.changeDirection(-1);
-
-          break;
-        case 'ArrowRight':
-          this.platform.changeDirection(1);
-
-          break;
-        case 'Space':
-          if (!this.isBallOnPlatform) {
-            return;
-          }
-
-          this.isBallOnPlatform = false;
-          this.ball.setDirectionY(-1);
-          this.ball.setDirectionX(-1);
-
-          break;
-        default:
-          break;
-      }
-    });
-
-    document.addEventListener('keyup', (event) => {
-      if (event.code === 'ArrowLeft' || event.code === 'ArrowRight') {
-        this.platform.changeDirection(0);
-      }
-    });
+    this.setDefaultPositions();
   }
 }
 

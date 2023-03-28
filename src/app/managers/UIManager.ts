@@ -7,12 +7,21 @@ import { HelperList, GameScore, ResultBlocks, ResultBlocksButton } from '../inte
 const mediator = Mediator.getInstance();
 
 class UIManager {
-  private static instance: UIManager;
-  private uiManagerMenu: UIManagerMenu;
-  private uiManagerScore: UIManagerScore;
-  private uiManagerResult: UIManagerResult;
-  private uiManagerHelper: UIManagerHelper;
+  private static instance: UIManager; // Экземпляр класса
+  private audioManager: AudioManager; // Аудио менеджер
+  private uiManagerMenu: UIManagerMenu; // Менеджер для главного меню
+  private uiManagerScore: UIManagerScore; // Менеджер для вывода очков игры
+  private uiManagerResult: UIManagerResult; // Менеджер для вывода результата игры
+  private uiManagerHelper: UIManagerHelper; // Менеджер для вывода подсказок управления
+  private uiActiveClass = 'is-active'; // Класс для взаимодействия с ui
 
+  private constructor() {
+    this.init();
+  }
+
+  /**
+   * Доступ к экземпляру класса
+   */
   public static getInstance(): UIManager {
     if (!UIManager.instance) {
       UIManager.instance = new UIManager();
@@ -21,58 +30,94 @@ class UIManager {
     return UIManager.instance;
   }
 
-  private constructor() {
-    this.init();
-  }
-
+  /**
+   * Инициализация менеджера
+   * @private
+   */
   private init(): void {
-    this.uiManagerMenu = new UIManagerMenu();
+    this.audioManager = new AudioManager();
+    this.uiManagerMenu = new UIManagerMenu(this.audioManager, this.uiActiveClass);
     this.uiManagerScore = new UIManagerScore();
-    this.uiManagerResult = new UIManagerResult();
+    this.uiManagerResult = new UIManagerResult(this.audioManager, this.uiActiveClass);
     this.uiManagerHelper = new UIManagerHelper();
   }
 
+  /**
+   * Добавляет список игр в главное меню
+   * @param wrapper
+   * @param menuButtons
+   */
   public setMenuItems(wrapper: HTMLElement, menuButtons: Array<string>) {
     this.uiManagerMenu.createMenuButtons(wrapper, menuButtons);
   }
 
+  /**
+   * Устанавливает блоки для вывода очков игры
+   * @param currentWrapper
+   * @param maxWrapper
+   */
   public setScoreItems(currentWrapper: HTMLElement, maxWrapper: HTMLElement) {
     this.uiManagerScore.setBlocks(currentWrapper, maxWrapper);
   }
 
+  /**
+   * Устанавливает блоки для вывода результата игры
+   * @param blocks
+   */
   public setResultBlocks(blocks: ResultBlocks) {
     this.uiManagerResult.setBlocks(blocks);
   }
 
+  /**
+   * Сообщает uiManagerResult что нужно вывести результат игры
+   * @param result
+   * @param score
+   */
   public setResult(result: string, score: number) {
     this.uiManagerResult.updateResult(result, score);
   }
 
+  /**
+   * Запускает музыку главного меню
+   */
   public playMusic() {
     this.uiManagerMenu.playMusic();
   }
 
+  /**
+   * Устанавливает блок для вывода подсказок управления
+   * @param helperBlock
+   */
   public setHelperBlock(helperBlock: HTMLElement) {
     this.uiManagerHelper.setWrapper(helperBlock);
   }
 
+  /**
+   * Сообщает uiManagerHelper что нужно обновить список подсказок
+   * @param helperList
+   */
   public updateHelperList(helperList: Array<HelperList>) {
     this.uiManagerHelper.updateHelperList(helperList);
   }
 
+  /**
+   * Сообщает uiManagerHelper что нужно установить подсказки по умолчанию
+   */
   public setDefaultHelperList() {
     this.uiManagerHelper.setDefaultList();
   }
 }
 
 class UIManagerMenu {
-  private audioManager: AudioManager;
-  private menuButtons: Array<HTMLElement> = [];
-  private activeIndex = 0;
-  private activeClass = 'is-active';
+  private audioManager: AudioManager; // Аудио менеджер
+  private menuButtons: Array<HTMLElement> = []; // Кнопки меню
+  private activeIndex = 0; // Индекс текущей активной кнопки
+  private activeClass: string; // Класс для подсветки активного пункта меню
 
-  constructor() {
-    this.initAudioManager();
+  constructor(audioManager: AudioManager, activeClass: string) {
+    this.activeClass = activeClass;
+
+    this.initAudioManager(audioManager);
     this.bindEvents();
   }
 
@@ -99,17 +144,19 @@ class UIManagerMenu {
   }
 
   public playMusic() {
-    this.audioManager.musicPlay('menu');
+    if (this.audioManager) {
+      this.audioManager.musicPlay('menu');
+    }
   }
 
-  private initAudioManager() {
+  private initAudioManager(audioManager: AudioManager) {
     const musicList = [
-      { name: 'menu', file: 'menu.mp3', loop: true },
+      { name: 'menu', file: 'menu.mp3', loop: true, volume: 0.3 },
       { name: 'button', file: 'button.mp3', loop: false },
       { name: 'enter', file: 'enter.mp3', loop: false }
     ];
 
-    this.audioManager = new AudioManager();
+    this.audioManager = audioManager;
     this.audioManager.addMusicList(musicList);
     this.playMusic();
   }
@@ -205,10 +252,12 @@ class UIManagerResult {
   private scoreWrapper: HTMLElement;
   private buttons: Array<ResultBlocksButton>;
   private activeIndex = 0;
-  private activeClass = 'is-active';
+  private activeClass: string;
 
-  constructor() {
-    this.initAudioManager();
+  constructor(audioManager: AudioManager, activeClass: string) {
+    this.activeClass = activeClass;
+
+    this.initAudioManager(audioManager);
     this.bindEvents();
   }
 
@@ -227,13 +276,13 @@ class UIManagerResult {
     this.scoreWrapper.innerText = Utils.getFilledZeroText(score.toString());
   }
 
-  private initAudioManager() {
+  private initAudioManager(audioManager: AudioManager) {
     const musicList = [
       { name: 'button', file: 'button.mp3', loop: false },
       { name: 'enter', file: 'enter.mp3', loop: false }
     ];
 
-    this.audioManager = new AudioManager();
+    this.audioManager = audioManager;
     this.audioManager.addMusicList(musicList);
   }
 
@@ -305,8 +354,8 @@ class UIManagerHelper {
 
   public setDefaultList() {
     this.list = [
-      { key: 'arrow up', description: 'Листать вверх' },
-      { key: 'arrow down', description: 'Листать вниз' },
+      { key: 'arrow up &uarr;', description: 'Листать вверх' },
+      { key: 'arrow down &darr;', description: 'Листать вниз' },
       { key: 'enter', description: 'Запустить игру' }
     ];
     this.showList();

@@ -7,13 +7,14 @@ import { stage } from '../types';
 const mediator = Mediator.getInstance();
 
 class GameManager {
-  private static instance: GameManager;
-  public static stage: stage = 'menu';
-  private visibilityManager: VisibilityManager;
-  private uiManager: UIManager;
-  private activeGame: GameObject;
-  private readonly gamesList: Array<GameObject>;
+  private static instance: GameManager; // Экземпляр класса
+  public static stage: stage = 'menu'; // Текущее состояние менеджера
+  private visibilityManager: VisibilityManager; // Менеджер видимости html-блоков
+  private uiManager: UIManager; // Менеджер для взаимодействия с ui
+  private activeGame: GameObject; // Текущая активная игра
+  private readonly gamesList: Array<GameObject>; // Список всех игр
 
+  // HTML-блоки для uiManager и visibilityManager
   private gameWrapper: HTMLElement;
   private menuWrapper: HTMLElement;
   private statusWrapper: HTMLElement;
@@ -26,12 +27,6 @@ class GameManager {
   private resultButtonExit: HTMLElement;
   private gameHelper: HTMLElement;
 
-  public static init(games: Array<GameObject>) {
-    if (!GameManager.instance) {
-      GameManager.instance = new GameManager(games);
-    }
-  }
-
   private constructor(games: Array<GameObject>) {
     this.gamesList = games;
 
@@ -41,6 +36,21 @@ class GameManager {
     this.initVisibilityManager();
   }
 
+  /**
+   * Инициализация менеджера
+   * @param games
+   */
+  public static init(games: Array<GameObject>) {
+    if (!GameManager.instance) {
+      GameManager.instance = new GameManager(games);
+    }
+  }
+
+  /**
+   * Обновляет текущее состояние менеджера и показываем/скрывает нужные блоки
+   * в зависимости от состояния
+   * @param stage
+   */
   public updateStage(stage: stage) {
     GameManager.stage = stage;
 
@@ -62,6 +72,10 @@ class GameManager {
     }
   }
 
+  /**
+   * Получает HTML-блоки
+   * @private
+   */
   private getElements() {
     this.gameWrapper = document.getElementById('game');
     this.menuWrapper = document.getElementById('game-menu');
@@ -76,6 +90,10 @@ class GameManager {
     this.gameHelper = document.getElementById('game-helper');
   }
 
+  /**
+   * Инициализирует UI-менеджер
+   * @private
+   */
   private initUIManager() {
     const buttons = this.gamesList.map((item) => item.name);
     const buttonsResult: Array<ResultBlocksButton> = [
@@ -95,6 +113,10 @@ class GameManager {
     this.uiManager.setDefaultHelperList();
   }
 
+  /**
+   * Инициализирует менеджер видимости блоков
+   * @private
+   */
   private initVisibilityManager() {
     const blocks: Array<InterfaceBlock> = [
       { name: 'game', element: this.gameWrapper },
@@ -107,6 +129,10 @@ class GameManager {
     this.visibilityManager.setBlocks(blocks);
   }
 
+  /**
+   * Инициализация подписчиков на события через mediator
+   * @private
+   */
   private subscribes() {
     mediator.subscribe('menu:enter', (index: number) => {
       this.activeGame = this.gamesList[index];
@@ -135,10 +161,14 @@ class GameManager {
 
     mediator.subscribe('game:restart', () => {
       this.updateStage('game');
-      this.activeGame.game.restart();
+      this.activeGame.game.start();
     });
 
     mediator.subscribe('game:exit', () => {
+      if (this.activeGame?.game) {
+        this.activeGame.game.stop();
+      }
+
       this.updateStage('menu');
       this.uiManager.playMusic();
       this.uiManager.setDefaultHelperList();

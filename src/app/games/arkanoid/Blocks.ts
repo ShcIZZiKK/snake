@@ -1,26 +1,23 @@
-interface Block {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  lives: number;
-  color: string;
-}
+// Interfaces
+import { Block } from '../../interfaces/games/arkanoid';
 
 class Blocks {
-  context: CanvasRenderingContext2D;
-  items: Array<Block> = [];
-  width = 60;
-  height = 16;
-  indent = 10;
-  columns = 6;
-  rows = 3;
-  offsetWindow = 15;
+  context: CanvasRenderingContext2D; // Контекст канваса
+  items: Array<Block> = []; // Массив блоков
+  width = 60; // Ширина одного блока
+  height = 16; // Высота одного блока
+  indent = 10; // Растояние между блоками
+  columns = 6; // Количество колонок
+  rows = 3; // Количество строк
+  offsetWindow = 15; // Растояние от края холста
 
   constructor(context: CanvasRenderingContext2D) {
     this.context = context;
   }
 
+  /**
+   * Рисует блоки
+   */
   public draw() {
     this.items.forEach((item) => {
       if (item.lives < 1) {
@@ -33,6 +30,9 @@ class Blocks {
     });
   }
 
+  /**
+   * Метод для создания блоков в зависимости от уровня
+   */
   public create(level: number) {
     this.items = [];
 
@@ -49,8 +49,12 @@ class Blocks {
     }
   }
 
+  /**
+   * Создаёт блоки для 1-го уровня
+   * @private
+   */
   private createFirstLevel() {
-    const color = 'red';
+    const colors = ['red', 'orange', 'yellow', 'yellow', 'orange', 'red']
     this.rows = 3;
 
     for (let row = 0; row < this.rows; row++) {
@@ -60,13 +64,17 @@ class Blocks {
           y: (this.height + this.indent) * row + this.offsetWindow,
           width: this.width,
           height: this.height,
-          color,
+          color: colors[column],
           lives: 1
         });
       }
     }
   }
 
+  /**
+   * Создаёт блоки для 2-го уровня
+   * @private
+   */
   private createSecondLevel() {
     const colors = ['red', 'orange', 'yellow', 'gray']
     const missColumns = [1, 4];

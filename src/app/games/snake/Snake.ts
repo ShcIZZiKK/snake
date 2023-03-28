@@ -1,19 +1,5 @@
-interface Cell {
-  x: number;
-  y: number;
-}
-
-interface SnakeOptions {
-  context: CanvasRenderingContext2D;
-  grid: number;
-  color: string;
-  size: CanvasSize
-}
-
-interface CanvasSize {
-  width: number;
-  height: number
-}
+// Interfaces
+import { Cell, CanvasSize, SnakeOptions } from '../../interfaces/games/snake';
 
 class Snake {
   context: CanvasRenderingContext2D; // Контекст канваса
@@ -22,7 +8,7 @@ class Snake {
   y = 200; // Начальная координата по Y
   dx = 20; // Скорость змейки по Х
   dy = 0; // Скорость змейки по Y
-  cells: Array<Cell> = []; // Тащим за собой хвост, который пока пустой
+  cells: Array<Cell> = []; // Ячейки змейки
   cellsCount = 4; // Стартовая длина змейки — 4 клеточки
   color: string; // Цвет змейки
   defaultColor = 'green'; // Цвет змейки по умолчанию
@@ -43,8 +29,8 @@ class Snake {
    * Задаём стартовые параметры основным переменным
    */
   setDefaultValues() {
-    this.x = 160;
-    this.y = 160;
+    this.x = this.cellSize * 10;
+    this.y = this.cellSize * 10;
     this.cells = [];
     this.cellsCount = 4;
     this.dx = this.cellSize;
@@ -64,28 +50,46 @@ class Snake {
     this.drawSnake();
   }
 
+  /**
+   * Рисуем змейку
+   */
   drawSnake() {
     this.context.fillStyle = this.color;
 
-    // Обрабатываем каждый элемент змейки
+    // Рисуем каждую ячейку змейки
     this.cells.forEach((cell) => {
       this.context.fillRect(cell.x, cell.y, this.cellSize - 1, this.cellSize - 1);
     });
   }
 
+  /**
+   * Увеличивает длину змейки
+   */
   addLengthSnake() {
     this.cellsCount++;
   }
 
+  /**
+   * Изменяет цвет змейки
+   * @param color
+   */
   changeColor(color: string) {
     this.color = color;
   }
 
+  /**
+   * Изменяет направление движения змейки
+   * @param dx
+   * @param dy
+   */
   setDirection(dx: number, dy: number) {
     this.dx = dx;
     this.dy = dy;
   }
 
+  /**
+   * Возвращает текущее направление змейки
+   */
   getDirection() {
     return {
       dx: this.dx,
@@ -117,6 +121,8 @@ class Snake {
 
   /**
    * Двигаем змейку
+   * путём добавления в начало массива новой ячейки
+   * и удаления последнего элемента из массива
    */
   private move() {
     this.cells.unshift({ x: this.x, y: this.y });

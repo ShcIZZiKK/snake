@@ -1,17 +1,31 @@
 import { Sound } from '../interfaces';
 
 class AudioManager {
-  private dir = 'assets/audio/';
-  private sounds: Array<Sound> = [];
+  private dir = 'assets/audio/'; // Директория от куда берутся звуки
+  private sounds: Array<Sound> = []; // Массив музыки
 
+  /**
+   * Добавляет музуку в менеджер
+   * @param sounds
+   */
   public addMusicList(sounds: Array<Sound>) {
     sounds.forEach((item: Sound) => {
-      item.manager = this.createAudioManager(item.file, item.loop);
+      const findSound = this.sounds.find((sound) => sound.name === item.name);
+
+      if (findSound) {
+        return;
+      }
+
+      item.manager = this.createAudioManager(item.file, item.loop, item.volume);
     });
 
-    this.sounds = sounds;
+    this.sounds = [...this.sounds, ...sounds];
   }
 
+  /**
+   * Запускает определённую музыку по имени
+   * @param name
+   */
   public musicPlay(name: string) {
     const musicObject = this.findMusic(name);
 
@@ -22,6 +36,10 @@ class AudioManager {
     musicObject.manager.play();
   }
 
+  /**
+   * Останавливает определённую музыку по имени
+   * @param name
+   */
   public musicStop(name: string) {
     const musicObject = this.findMusic(name);
 
@@ -33,17 +51,31 @@ class AudioManager {
     musicObject.manager.currentTime = 0;
   }
 
+  /**
+   * Ищет определённую музыку по имени
+   * @param name
+   */
   private findMusic(name: string) {
     return this.sounds.find((item) => item.name === name);
   }
 
-  private createAudioManager(file: string, loop: boolean) {
+  /**
+   * Создаёт HTMLAudioElement
+   * @param file
+   * @param loop
+   * @param volume
+   * @private
+   */
+  private createAudioManager(file: string, loop: boolean, volume: number) {
     const manager = new Audio();
 
     manager.src = `${this.dir}${file}`;
 
     if (loop) {
       manager.loop = true;
+    }
+
+    if (volume) {
       manager.volume = 0.3;
     }
 

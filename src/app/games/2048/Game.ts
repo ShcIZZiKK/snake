@@ -1,114 +1,297 @@
-// Managers
+// Helpers
 import DefaultGame from '../../abstracts/DefaultGame';
-import AudioManager from '../../managers/AudioManager';
-import StoreManager from '../../managers/StoreManager';
 import Mediator from '../../helpers/Mediator';
 
 // Game elements
 import Tile from './Tile';
 import Background from './Background';
 
-const mediator = Mediator.getInstance();
-
-interface BoardCell {
-  value: number;
-  isStacked: boolean;
-  canMove: boolean;
-  x: number;
-  y: number;
-  id: number;
-}
-
+// Interfaces
+import { BoardCell } from '../../interfaces/games/2048';
 type board = Array<Array<BoardCell>>;
 
+// Custom
+const mediator = Mediator.getInstance();
+
 class Game extends DefaultGame {
-  audioManager: AudioManager; // Аудио менеджер
-  storeManager: StoreManager; // Хранилище очков
-  canvas: HTMLCanvasElement; // Html элемент канваса
-  context: CanvasRenderingContext2D; // Контекст канваса
-  tiles: Array<Tile> = [];
-  background: Background;
+  tiles: Array<Tile> = []; // Список плиток
+  background: Background; // Фон
+  size = 4; // Размер игрового поля size * size
+  board: board = []; // Ячейки игрового поля
+  isAnimated = false; // Происходит ли сейчас анимация
+  isShowNewCell = false; // Происходит ли сейчас вывод новой ячейки
+  tileWidth = 105; // Ширина плитки
+  tileHeight = 105; // Высота плитки
+  tilePadding = 4; // Расстояние между плитками плитки
 
-  gameOver = false;
-  size = 4;
-  board: board = [];
-  idAnimated = false;
-  score = 0;
-
-  init() {
-    this.initManagers();
-    this.initElements();
-    this.bindEvents();
-    this.start();
+  /**
+   * Останавливает игру
+   */
+  stop() {
+    super.stop();
+    this.audioManager.musicStop('snake');
   }
 
-  start() {
-    this.board = this.getEmptyBoard();
-    this.generateRandom(this.board);
-    this.generateRandom(this.board);
-    this.audioManager.musicPlay('snake');
-    this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.gameOver = false;
-    requestAnimationFrame(this.update.bind(this));
-  }
-
-  restart() {
-    console.log('restart');
-  }
-
+  /**
+   * Логика игры
+   */
   update() {
-    if (this.gameOver) {
-      return;
-    }
-
-    requestAnimationFrame(this.update.bind(this));
+    super.update();
 
     this.draw();
   }
 
+  /**
+   * Отрисовка игры
+   */
   draw() {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.background.draw();
 
-    const test = this.board.flat();
-    const allSize = this.size * this.size;
+    const cells = this.board.flat();
 
-    for (let i = 0; i < allSize; i++) {
-      const tile = this.tiles.find((tile) => tile.id === test[i].id);
+    for (let i = 0; i < cells.length; i++) {
+      const tile = this.tiles.find((item) => item.id === cells[i].id);
 
-      if (test[i].value) {
-        if (tile.x !== test[i].x || tile.y !== test[i].y) {
+      if (cells[i].value) {
+        if (tile.x !== cells[i].x || tile.y !== cells[i].y) {
           tile.changePosition({
-            x: test[i].x,
-            y: test[i].y
+            x: cells[i].x,
+            y: cells[i].y
           });
         }
       }
 
-      tile.draw(test[i].value);
+      tile.draw(cells[i].value);
     }
 
     const hasAnimatedTile = this.tiles.find((tile) => tile.isAnimated);
 
-    this.idAnimated = !!hasAnimatedTile;
+    this.isAnimated = !!hasAnimatedTile;
   }
 
-  loseGame() {
-    console.log('loseGame');
+  /**
+   * Инициализация менеджеров
+   */
+  initManagers() {
+    super.initManagers('2048');
+
+    const musicList = [
+      { name: 'snake', file: 'snake.mp3', loop: true, volume: 0.3 },
+      { name: 'food', file: 'food.mp3', loop: false },
+      { name: 'lose', file: 'lose.mp3', loop: false }
+    ];
+
+    this.audioManager.addMusicList(musicList);
   }
 
-  winGame() {
-    this.audioManager.musicStop('snake');
-    this.audioManager.musicPlay('win');
-    this.gameOver = true;
+  /**
+   * Инициализация элементов игры
+   */
+  initElements() {
+    super.initElements();
 
-    mediator.publish('game:win', this.score);
+    const backgroundOptions = {
+      context: this.context,
+      width: this.tileWidth,
+      height: this.tileHeight,
+      padding: this.tilePadding,
+      size: this.size
+    }
 
-    this.score = 0;
-    this.storeManager.updateCurrentValue(this.score);
+    this.background = new Background(backgroundOptions);
   }
 
+  /**
+   * Устанавливает значения по умолчанию
+   */
+  setDefaultValues() {
+    super.setDefaultValues();
+
+    this.board = this.getEmptyBoard();
+    this.generateRandom();
+    this.generateRandom();
+
+    this.tiles = [];
+    this.fillTilesList();
+
+    this.audioManager.musicPlay('snake');
+  }
+
+  /**
+   * Выполняет действия при подебе/проигрыше
+   */
+  changeStatusGame(status: string) {
+    super.changeStatusGame(status, 'ark');
+  }
+
+  /**
+   * Обработчик событий нажатия кнопок
+   * @param event
+   */
+  eventsKeyDown(event?: KeyboardEvent) {
+    if (event.code === 'Escape') {
+      mediator.publish('game:exit');
+    }
+
+    if (this.isAnimated || this.gameOver || this.isShowNewCell) {
+      return;
+    }
+
+    switch (event.code) {
+      case 'ArrowLeft':
+        this.actionAfterMove(this.moveLeft(this.board));
+
+        break;
+      case 'ArrowUp':
+        this.actionAfterMove(this.moveUp(this.board));
+
+        break;
+      case 'ArrowRight':
+        this.actionAfterMove(this.moveRight(this.board));
+
+        break;
+      case 'ArrowDown':
+        this.actionAfterMove(this.moveDown(this.board));
+
+        break;
+      default:
+        break;
+    }
+  }
+
+  /**
+   * Действия после сдвига таблицы
+   */
+  private actionAfterMove(newBoard: board) {
+    // Если после нажатия кнопки, сдвига не было ничего не делаем
+    if (!this.hasDiff(this.board, newBoard)) {
+      return;
+    }
+
+    this.board = newBoard;
+
+    // Добавляем очки за стакнутые ячейки
+    this.addScore(this.board);
+
+    // Проверяем не победил ли пользователь
+    if (this.isWin()) {
+      this.changeStatusGame('win');
+
+      return;
+    }
+
+    // Ставим флаг, что добавляется новая плитка на доску
+    this.isShowNewCell = true;
+
+    // Через заданный промежуток времени выводим плитку
+    setTimeout(() => {
+      this.generateRandom();
+      this.isShowNewCell = false;
+
+      // Проверяем не проигранна ли игра
+      if (this.isLose()) {
+        this.changeStatusGame('lose');
+      }
+    }, 150);
+  }
+
+  /**
+   * Проверяем не проиграл ли пользователь
+   * @private
+   */
+  private isLose() {
+    // Если есть отличие, значит игра не проигранна
+    if (this.hasDiff(this.board, this.moveLeft(this.board))) {
+      return false;
+    }
+
+    if (this.hasDiff(this.board, this.moveRight(this.board))) {
+      return false;
+    }
+
+    if (this.hasDiff(this.board, this.moveUp(this.board))) {
+      return false;
+    }
+
+    if (this.hasDiff(this.board, this.moveDown(this.board))) {
+      return false;
+    }
+
+    // Если отличий нет, игра проигранна
+    return true;
+  }
+
+  /**
+   * Проверяет, есть ли отличие у текущей доски, и у сдвинутой
+   * @param board
+   * @param newBoard
+   * @private
+   */
+  private hasDiff(board: board, newBoard: board) {
+    for (let row = 0; row < this.size; row++) {
+      for (let column = 0; column < this.size; column++) {
+        if (board[row][column].value !== newBoard[row][column].value) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Возвращает доску смещённую влево
+   * @private
+   */
+  private moveLeft(board: board): board {
+    return this.move(board);
+  }
+
+  /**
+   * Возвращает доску смещённую вправа
+   * @private
+   */
+  private moveRight(board: board): board {
+    // Отражаем доску, чтобы правая сторона стала левой
+    const reverseBoard = this.reverse(board);
+    // Смещаем доску влево
+    const newBoard = this.moveLeft(reverseBoard);
+    // Отражаем обратно и возвращаем
+    return this.reverse(newBoard);
+  }
+
+  /**
+   * Возвращает доску смещённую вверх
+   * @private
+   */
+  private moveUp(board: board): board {
+    // Поворачиваем доску на -90 градусов, чтобы верх доски стал левой стороной
+    const rotateBoard = this.rotate90deg(board, -1);
+    // Смещаем доску влево
+    const newBoard = this.moveLeft(rotateBoard);
+    // Поворачиваем обратно и возвращаем
+    return this.rotate90deg(newBoard,1);
+  }
+
+  /**
+   * Возвращает доску смещённую вниз
+   * @private
+   */
+  private moveDown(board: board): board {
+    // Поворачиваем доску на 90 градусов, чтобы низ доски стал левой стороной
+    const rotateBoard = this.rotate90deg(board, 1);
+    // Смещаем доску влево
+    const newBoard = this.moveLeft(rotateBoard);
+    // Поворачиваем обратно и возвращаем
+    return this.rotate90deg(newBoard,-1);
+  }
+
+  /**
+   * Формируем пустую доску
+   * @private
+   */
   private getEmptyBoard() {
     const newBoard = [];
     let id = 0;
@@ -126,10 +309,6 @@ class Game extends DefaultGame {
           id
         });
 
-        const tile = new Tile(this.context, id, column, row);
-
-        this.tiles.push(tile);
-
         id++;
       }
 
@@ -139,30 +318,71 @@ class Game extends DefaultGame {
     return newBoard;
   }
 
-  private hasValue = (board: board, value: number) => {
+  /**
+   * Наполняем массив плиток
+   * @private
+   */
+  private fillTilesList() {
+    const options = {
+      context: this.context,
+      width: this.tileWidth,
+      height: this.tileHeight,
+      padding: this.tilePadding
+    }
+    let id = 0;
+
     for (let row = 0; row < this.size; row++) {
       for (let column = 0; column < this.size; column++) {
-        if (board[row][column].value === value) {
+        const tile = new Tile({
+          ...options,
+          id,
+          x: column,
+          y: row
+        });
+
+        this.tiles.push(tile);
+
+        id++;
+      }
+    }
+  }
+
+  /**
+   * Проверяем есть ли заданное число на доске
+   * @param value
+   */
+  private hasValue(value: number) {
+    for (let row = 0; row < this.size; row++) {
+      for (let column = 0; column < this.size; column++) {
+        if (this.board[row][column].value === value) {
           return true;
         }
       }
     }
 
     return false;
-  };
-
-  private checkWin = (board: board) => {
-    if (this.hasValue(board, 2048)) {
-      this.winGame();
-    }
   }
 
-  private isFull = (board: board) => {
-    return !this.hasValue(board, 0);
-  };
+  /**
+   * Проверяем победил ли пользователь
+   */
+  private isWin() {
+    return this.hasValue(2048);
+  }
 
-  private generateRandom(board: board) {
-    if (this.isFull(board)) {
+  /**
+   * Проверяем заполнена ли вся доска числами
+   */
+  private isFull() {
+    return !this.hasValue(0);
+  }
+
+  /**
+   * Генерирует рандомное число "4" или "2"
+   * и вставляет его в рандомное место на доске
+   */
+  private generateRandom() {
+    if (this.isFull()) {
       return;
     }
 
@@ -174,46 +394,43 @@ class Game extends DefaultGame {
       const randomRow = Math.floor(Math.random() * this.size);
       const randomCol = Math.floor(Math.random() * this.size);
 
-      if (board[randomRow][randomCol].value === 0) {
-        board[randomRow][randomCol].value = randomValue;
+      if (this.board[randomRow][randomCol].value === 0) {
+        this.board[randomRow][randomCol].value = randomValue;
         isFoundEmptyCell = true;
 
-        const tile = this.tiles.find((tile) => tile.id === board[randomRow][randomCol].id);
+        const tile = this.tiles.find((tile) => tile.id === this.board[randomRow][randomCol].id);
 
         if (tile) {
-          tile.x = board[randomRow][randomCol].x;
-          tile.y = board[randomRow][randomCol].y;
+          tile.x = this.board[randomRow][randomCol].x;
+          tile.y = this.board[randomRow][randomCol].y;
         }
 
         this.score += randomValue;
         this.storeManager.updateCurrentValue(this.score);
       }
     }
-
-    return board;
   }
 
+  /**
+   * Смещаяет все ячейки в линии влево
+   * @param row
+   * @private
+   */
   private static mergeRow(row: Array<BoardCell>): Array<BoardCell> {
     for (let column = 0; column < row.length; column++) {
-      /**
-       * Если значение равно нулю, то не двигаем ячейку
-       */
+      // Если значение равно нулю, то не двигаем ячейку
       if (row[column].value === 0) {
         continue;
       }
 
-      /**
-       * Если значение прижато к краю, то оно не может двигаться
-       */
+      // Если значение прижато к краю, то оно не может двигаться
       if (column === 0) {
         row[column].canMove = false;
 
         continue;
       }
 
-      /**
-       * Если предыдущее ячейка пустая, то сдвигаем текущую ячейку на её позицию
-       */
+      // Если предыдущее ячейка пустая, то сдвигаем текущую ячейку на её позицию
       if (row[column - 1].value === 0) {
         row[column - 1].value = row[column].value;
         row[column].value = 0;
@@ -225,10 +442,8 @@ class Game extends DefaultGame {
         continue;
       }
 
-      /**
-       * Если предыдущая ячейка имеет значение равное текущей ячейке и значения
-       * не были стакнуты, то скрещиваем ячейки
-       */
+      // Если предыдущая ячейка имеет значение равное текущей ячейке и значения
+      // не были стакнуты, то скрещиваем ячейки
       if (row[column - 1].value === row[column].value && !row[column - 1].isStacked && !row[column].isStacked) {
         row[column - 1].value = row[column - 1].value * 2;
         row[column].value = 0;
@@ -247,41 +462,68 @@ class Game extends DefaultGame {
       row[column].canMove = false;
     }
 
+    // Получаем массив ячеек которые больше не могут двигаться
     const checkMoved = row.filter((columnItem) => {
       return columnItem.value === 0 || columnItem.isStacked || !columnItem.canMove;
     });
 
+    // Если кол-во ячеек которые не могут двигаться, равно длине строки, то возвращаем эту строку
     if (checkMoved.length === row.length) {
       return row;
     }
 
-    return this.mergeRow(row);
+    // Иначе повторно вызываем метод со сдвигом
+    return Game.mergeRow(row);
   }
 
+  /**
+   * Двигает ячейки на доске
+   * @param board
+   * @private
+   */
   private move(board: board) {
+    const newBoard: board = JSON.parse(JSON.stringify(board));
+
     for (let row = 0; row < this.size; row++) {
       // Делаем все значения двигаемыми и не стакнутыми
-      board[row].forEach((columnItem) => {
+      newBoard[row].forEach((columnItem) => {
         columnItem.canMove = true;
         columnItem.isStacked = false;
       });
 
       // Получаем новую строку
-      board[row] = Game.mergeRow(board[row]);
-
-      // Добавляем очки за стакнутые ячейки
-      this.addScore(board[row]);
+      newBoard[row] = Game.mergeRow(newBoard[row]);
     }
+
+    return newBoard;
   }
 
+  /**
+   * Отражает доску по горизонтали доску
+   * Например:
+   * [[1, 2], [3, 4]] => [[2, 1], [4, 3]]
+   * @param board
+   * @private
+   */
   private reverse(board: board): board {
-    for (let row = 0; row < this.size; row++) {
-      board[row].reverse();
-    }
+    return board.map((row) => {
+      const reverseRow: Array<BoardCell> = [];
+      const length = row.length;
 
-    return board;
+      for (let i = 0; i < length; i++) {
+        reverseRow[i] = row[length - 1 - i];
+      }
+
+      return reverseRow;
+    });
   }
 
+  /**
+   * Поворачивает доску на 90 градусов
+   * @param board
+   * @param direction - 1 - на 90 градусов вправо, -1 - на 90 градусов влево
+   * @private
+   */
   private rotate90deg(board: board, direction: number) {
     if (direction > 0) {
       return board[0].map((val, index) => board.map(row => row[index]).reverse());
@@ -290,89 +532,26 @@ class Game extends DefaultGame {
     return board[0].map((val, index) => board.map(row => row[row.length-1-index]));
   }
 
-  private addScore(row: Array<BoardCell>) {
-    const addScore = row.reduce((sum, acc) => {
-      if (acc.isStacked) {
-        sum += acc.value;
-      }
+  /**
+   * Добавляет очки за стакнутые ячейки
+   * @param board
+   * @private
+   */
+  private addScore(board: board) {
+    const addScore = board.reduce((sum: number, row) => {
+      return row.reduce((rowSum: number, rowAcc: BoardCell) => {
+        if (rowAcc.isStacked) {
+          rowSum += rowAcc.value;
+        }
 
-      return sum;
+        return rowSum;
+      }, 0);
     }, 0);
 
     if (addScore > 0) {
       this.score += addScore;
       this.storeManager.updateCurrentValue(this.score);
     }
-  }
-
-  private initManagers() {
-    const musicList = [
-      { name: 'snake', file: 'snake.mp3', loop: true },
-      { name: 'food', file: 'food.mp3', loop: false },
-      { name: 'lose', file: 'lose.mp3', loop: false }
-    ];
-
-    this.audioManager = new AudioManager();
-    this.audioManager.addMusicList(musicList);
-
-    this.storeManager = new StoreManager('2048');
-  }
-
-  private initElements() {
-    this.canvas = <HTMLCanvasElement>document.getElementById('game');
-    this.context = this.canvas.getContext('2d');
-
-    this.background = new Background(this.context);
-  }
-
-  private bindEvents() {
-    document.addEventListener('keydown', (event) => {
-      if (event.code === 'Escape') {
-        this.audioManager.musicStop('snake');
-        this.gameOver = true;
-
-        mediator.publish('game:exit');
-      }
-
-      if (this.idAnimated || this.gameOver) {
-        return;
-      }
-
-      switch (event.code) {
-        case 'ArrowLeft':
-          this.move(this.board);
-          this.generateRandom(this.board);
-          this.checkWin(this.board);
-
-          break;
-        case 'ArrowUp':
-          this.board = this.rotate90deg(this.board, -1);
-          this.move(this.board);
-          this.board = this.rotate90deg(this.board,1);
-          this.generateRandom(this.board);
-          this.checkWin(this.board);
-
-          break;
-        case 'ArrowRight':
-          this.reverse(this.board);
-          this.move(this.board);
-          this.reverse(this.board);
-          this.generateRandom(this.board);
-          this.checkWin(this.board);
-
-          break;
-        case 'ArrowDown':
-          this.board = this.rotate90deg(this.board, 1);
-          this.move(this.board);
-          this.board = this.rotate90deg(this.board,-1);
-          this.generateRandom(this.board);
-          this.checkWin(this.board);
-
-          break;
-        default:
-          break;
-      }
-    });
   }
 }
 
