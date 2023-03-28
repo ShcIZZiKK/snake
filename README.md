@@ -1,5 +1,5 @@
 ### Демо
-https://shcizzikk.github.io/start-wars-table/
+https://shcizzikk.github.io/web-games/
 
 ### Сборка
 ```
